@@ -116,7 +116,7 @@ REASONING: [1-2 sentences explaining why this grind setting is optimal for this 
       
       // Parse Claude's response
       const grindMatch = text.match(/GRIND:\s*(\d+\.?\d*)/i);
-      const reasoningMatch = text.match(/REASONING:\s*(.+)/is);
+      const reasoningMatch = text.match(/REASONING:\s*([\s\S]+)/i);
       
       if (!grindMatch) {
         throw new Error('AI did not return a valid grind setting');
