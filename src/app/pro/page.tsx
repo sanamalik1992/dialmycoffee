@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-// ... other imports
+import { useState, useMemo } from "react";
+import { supabase } from "@/lib/supabase";
 
-export const dynamic = 'force-dynamic'; // ADD THIS
+export const dynamic = 'force-dynamic';
 
 export default function ProPage() {
   const params = useSearchParams();
@@ -30,23 +31,23 @@ export default function ProPage() {
     try {
       setLoading(true);
       const { data: sessionData } = await supabase.auth.getSession();
-const token = sessionData.session?.access_token;
+      const token = sessionData.session?.access_token;
 
-console.log("Token:", token); //
-console.log("User:", data.user?.email);
+      console.log("Token:", token);
+      console.log("User:", data.user?.email);
 
-if (!token) {
-  window.location.href = "/login";
-  return;
-}
+      if (!token) {
+        window.location.href = "/login";
+        return;
+      }
 
-const res = await fetch("/api/create-checkout-session", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  },
-});
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const data2 = await res.json();
 
