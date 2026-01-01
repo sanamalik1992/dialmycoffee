@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+// ... other imports
+
+export const dynamic = 'force-dynamic'; // ADD THIS
 
 export default function ProPage() {
   const params = useSearchParams();
