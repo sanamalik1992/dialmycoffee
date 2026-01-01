@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, useMemo } from "react";
@@ -7,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 
 export const dynamic = 'force-dynamic';
 
-export default function ProPage() {
+function ProPageContent() {
   const params = useSearchParams();
   const canceled = useMemo(() => params.get("canceled") === "1", [params]);
   const [loading, setLoading] = useState(false);
@@ -163,5 +164,17 @@ export default function ProPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function ProPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-[#0F1115] text-[#F4F4F2] grid place-items-center">
+        <div className="text-[#C48A5A] text-2xl">☕︎</div>
+      </main>
+    }>
+      <ProPageContent />
+    </Suspense>
   );
 }
