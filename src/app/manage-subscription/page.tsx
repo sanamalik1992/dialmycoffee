@@ -32,19 +32,21 @@ function ManageSubscriptionContent() {
 
     setUserEmail(user.email || "");
 
-    // Get subscription info
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('is_pro, stripe_subscription_id')
-      .eq('id', user.id)
-      .single();
+    // Get subscription info via API (bypasses RLS)
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
 
-    console.log("Profile data:", profile);
-    console.log("Profile error:", error);
-    console.log("is_pro:", profile?.is_pro);
-    console.log("is_pro type:", typeof profile?.is_pro);
+    const res = await fetch("/api/get-subscription-status", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-    if (!profile?.is_pro) {
+    const data = await res.json();
+    
+    console.log("Subscription data:", data);
+
+    if (!data.isPro) {
       console.log("User is not Pro, redirecting to /pro");
       router.push("/pro");
       return;
@@ -52,7 +54,8 @@ function ManageSubscriptionContent() {
 
     console.log("User is Pro! Showing page");
     setIsPro(true);
-    setSubscriptionId(profile.stripe_subscription_id || "");
+    setSubscriptionId(data.subscriptionId || "");
+    setUserEmail(data.email);
     setLoading(false);
   }
 
