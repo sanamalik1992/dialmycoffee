@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import GrindFinder from "@/components/GrindFinder";
 import SignUpModal from "@/components/SignUpModal";
@@ -10,6 +11,7 @@ export default function HomePage() {
   const router = useRouter();
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isPro, setIsPro] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -18,6 +20,17 @@ export default function HomePage() {
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser();
     setIsLoggedIn(!!user);
+
+    if (user) {
+      // Check if user is Pro
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_pro')
+        .eq('id', user.id)
+        .single();
+
+      setIsPro(!!profile?.is_pro);
+    }
   }
 
   function handleGetProClick() {
@@ -38,7 +51,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Get Pro button */}
+      {/* Header with Get Pro/Manage Subscription button */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-4xl font-semibold tracking-tight text-white">
@@ -49,12 +62,21 @@ export default function HomePage() {
           </p>
         </div>
 
-        <button
-          onClick={handleGetProClick}
-          className="shrink-0 rounded-xl bg-amber-700 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-600 transition"
-        >
-          Get Pro - £3.99/mo
-        </button>
+        {isPro ? (
+          <Link
+            href="/manage-subscription"
+            className="shrink-0 rounded-xl bg-[#C48A5A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#B67A4A] transition"
+          >
+            Manage Subscription
+          </Link>
+        ) : (
+          <button
+            onClick={handleGetProClick}
+            className="shrink-0 rounded-xl bg-amber-700 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-600 transition"
+          >
+            Get Pro - £3.99/mo
+          </button>
+        )}
       </div>
 
       <GrindFinder />
