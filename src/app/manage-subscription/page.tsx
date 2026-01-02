@@ -22,7 +22,10 @@ function ManageSubscriptionContent() {
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser();
     
+    console.log("User:", user);
+    
     if (!user) {
+      console.log("No user, redirecting to /");
       router.push("/");
       return;
     }
@@ -30,17 +33,24 @@ function ManageSubscriptionContent() {
     setUserEmail(user.email || "");
 
     // Get subscription info
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('is_pro, stripe_subscription_id')
       .eq('id', user.id)
       .single();
 
+    console.log("Profile data:", profile);
+    console.log("Profile error:", error);
+    console.log("is_pro:", profile?.is_pro);
+    console.log("is_pro type:", typeof profile?.is_pro);
+
     if (!profile?.is_pro) {
+      console.log("User is not Pro, redirecting to /pro");
       router.push("/pro");
       return;
     }
 
+    console.log("User is Pro! Showing page");
     setIsPro(true);
     setSubscriptionId(profile.stripe_subscription_id || "");
     setLoading(false);
