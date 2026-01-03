@@ -7,15 +7,21 @@ const supabase = createClient(
 );
 
 export async function GET(req: NextRequest) {
+  console.log('[GET SUBSCRIPTION STATUS] Starting...');
+  
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '');
+    console.log('[GET SUBSCRIPTION STATUS] Token:', token ? 'Present' : 'Missing');
+    
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', isPro: false }, { status: 401 });
     }
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    console.log('[GET SUBSCRIPTION STATUS] User:', user?.id, 'Error:', authError);
+    
     if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Invalid token', isPro: false }, { status: 401 });
     }
 
     // Use service role to bypass RLS
@@ -25,16 +31,23 @@ export async function GET(req: NextRequest) {
       .eq('id', user.id)
       .single();
 
+    console.log('[GET SUBSCRIPTION STATUS] Profile:', profile, 'Error:', error);
+
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[GET SUBSCRIPTION STATUS] Profile error:', error);
+      return NextResponse.json({ error: error.message, isPro: false }, { status: 500 });
     }
 
-    return NextResponse.json({
+    const result = {
       isPro: profile?.is_pro || false,
       subscriptionId: profile?.stripe_subscription_id || null,
       email: profile?.email || user.email,
-    });
+    };
+    
+    console.log('[GET SUBSCRIPTION STATUS] Returning:', result);
+    return NextResponse.json(result);
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[GET SUBSCRIPTION STATUS] Catch error:', error);
+    return NextResponse.json({ error: error.message, isPro: false }, { status: 500 });
   }
 }
