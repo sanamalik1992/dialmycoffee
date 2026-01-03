@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -22,14 +22,26 @@ export default function HomePage() {
     setIsLoggedIn(!!user);
 
     if (user) {
-      // Check if user is Pro
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_pro')
-        .eq('id', user.id)
-        .single();
+      // Check if user is Pro using API (bypasses RLS)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
 
-      setIsPro(!!profile?.is_pro);
+      if (token) {
+        try {
+          const res = await fetch("/api/get-subscription-status", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            setIsPro(!!data.isPro);
+          }
+        } catch (error) {
+          console.error("Failed to check Pro status:", error);
+        }
+      }
     }
   }
 
