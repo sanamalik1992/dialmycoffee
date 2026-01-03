@@ -81,46 +81,37 @@ export default function GrindFinder() {
         if (user) {
           setUserEmail(user.email ?? null);
 
-          let { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("is_pro, free_uses_limit, free_uses_count")
-            .eq("id", user.id)
-            .single();
+          // Check Pro status using API (bypasses RLS)
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
 
-          // If profile doesn't exist, create it
-          if (profileError && profileError.code === 'PGRST116') {
-            const { data: newProfile, error: insertError } = await supabase
-              .from("profiles")
-              .insert({
-                id: user.id,
-                email: user.email,
-                is_pro: false,
-                free_uses_limit: 2,
-                free_uses_count: 0,
-              })
-              .select("is_pro, free_uses_limit, free_uses_count")
-              .single();
+          if (token) {
+            try {
+              const res = await fetch("/api/get-subscription-status", {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
 
-            if (!insertError && newProfile) {
-              profile = newProfile;
-            }
-          }
+              if (res.ok) {
+                const data = await res.json();
+                const isProUser = !!data.isPro;
+                
+                if (isMounted) {
+                  setIsPro(isProUser);
+                  
+                  if (!isProUser) {
+                    setRemainingFree(data.remaining ?? 2);
+                  }
 
-          if (profile && isMounted) {
-            const isProUser = !!profile.is_pro;
-            setIsPro(isProUser);
-            
-            if (!profile.is_pro) {
-              const remaining = Math.max(
-                0,
-                (profile.free_uses_limit ?? 2) - (profile.free_uses_count ?? 0)
-              );
-              setRemainingFree(remaining);
-            }
-
-            // Load favourites for Pro users
-            if (isProUser) {
-              await loadFavourites();
+                  // Load favourites for Pro users
+                  if (isProUser) {
+                    await loadFavourites();
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Failed to check Pro status:", error);
             }
           }
         } else {
