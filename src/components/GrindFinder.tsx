@@ -47,6 +47,11 @@ export default function GrindFinder() {
   const [limitReached, setLimitReached] = useState(false);
   const [showSignUpModal, setShowSignUpModal] = useState(false);
 
+  // Favourites state
+  const [favouriteMachines, setFavouriteMachines] = useState<Set<string>>(new Set());
+  const [favouriteBeans, setFavouriteBeans] = useState<Set<string>>(new Set());
+  const [savingFavourite, setSavingFavourite] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -102,13 +107,20 @@ export default function GrindFinder() {
           }
 
           if (profile && isMounted) {
-            setIsPro(!!profile.is_pro);
+            const isProUser = !!profile.is_pro;
+            setIsPro(isProUser);
+            
             if (!profile.is_pro) {
               const remaining = Math.max(
                 0,
                 (profile.free_uses_limit ?? 2) - (profile.free_uses_count ?? 0)
               );
               setRemainingFree(remaining);
+            }
+
+            // Load favourites for Pro users
+            if (isProUser) {
+              await loadFavourites();
             }
           }
         } else {
@@ -144,6 +156,137 @@ export default function GrindFinder() {
       isMounted = false;
     };
   }, []);
+
+  async function loadFavourites() {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) return;
+
+    try {
+      const [machinesRes, beansRes] = await Promise.all([
+        fetch("/api/favourite-machines", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch("/api/favourite-beans", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      const [machinesData, beansData] = await Promise.all([
+        machinesRes.json(),
+        beansRes.json(),
+      ]);
+
+      if (machinesData.favourites) {
+        setFavouriteMachines(new Set(machinesData.favourites.map((f: any) => f.machine_id)));
+      }
+
+      if (beansData.favourites) {
+        setFavouriteBeans(new Set(beansData.favourites.map((f: any) => f.bean_id)));
+      }
+    } catch (error) {
+      console.error("Failed to load favourites:", error);
+    }
+  }
+
+  async function toggleFavouriteMachine(id: string) {
+    if (!isPro || savingFavourite) return;
+
+    setSavingFavourite(true);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      if (!token) return;
+
+      const isFavourite = favouriteMachines.has(id);
+
+      if (isFavourite) {
+        // Remove from favourites
+        const res = await fetch(`/api/favourite-machines?machineId=${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          setFavouriteMachines(prev => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        }
+      } else {
+        // Add to favourites
+        const res = await fetch("/api/favourite-machines", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ machineId: id }),
+        });
+
+        if (res.ok) {
+          setFavouriteMachines(prev => new Set(prev).add(id));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to toggle favourite:", error);
+    } finally {
+      setSavingFavourite(false);
+    }
+  }
+
+  async function toggleFavouriteBean(id: string) {
+    if (!isPro || savingFavourite) return;
+
+    setSavingFavourite(true);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      if (!token) return;
+
+      const isFavourite = favouriteBeans.has(id);
+
+      if (isFavourite) {
+        // Remove from favourites
+        const res = await fetch(`/api/favourite-beans?beanId=${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          setFavouriteBeans(prev => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        }
+      } else {
+        // Add to favourites
+        const res = await fetch("/api/favourite-beans", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ beanId: id }),
+        });
+
+        if (res.ok) {
+          setFavouriteBeans(prev => new Set(prev).add(id));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to toggle favourite:", error);
+    } finally {
+      setSavingFavourite(false);
+    }
+  }
 
   const roasters = useMemo(
     () => Array.from(new Set(beans.map((b) => b.roaster))).sort(),
@@ -283,7 +426,7 @@ export default function GrindFinder() {
             Find Your Perfect Grind
           </h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Get personalized grind settings for your setup
+            Get personalised grind settings for your setup
           </p>
         </div>
 
@@ -316,19 +459,33 @@ export default function GrindFinder() {
       </div>
 
       <div className="space-y-4">
-        <select
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white disabled:opacity-50"
-          value={machineId}
-          onChange={(e) => setMachineId(e.target.value)}
-          disabled={generating}
-        >
-          <option value="">Select coffee machine</option>
-          {machines.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </select>
+        {/* Machine selector with favourite button */}
+        <div className="relative">
+          <select
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 pr-12 text-white disabled:opacity-50"
+            value={machineId}
+            onChange={(e) => setMachineId(e.target.value)}
+            disabled={generating}
+          >
+            <option value="">Select coffee machine</option>
+            {machines.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} {favouriteMachines.has(m.id) ? "⭐" : ""}
+              </option>
+            ))}
+          </select>
+          
+          {isPro && machineId && (
+            <button
+              onClick={() => toggleFavouriteMachine(machineId)}
+              disabled={savingFavourite}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xl hover:scale-110 transition disabled:opacity-50"
+              title={favouriteMachines.has(machineId) ? "Remove from favourites" : "Add to favourites"}
+            >
+              {favouriteMachines.has(machineId) ? "⭐" : "☆"}
+            </button>
+          )}
+        </div>
 
         <select
           className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white disabled:opacity-50"
@@ -347,19 +504,33 @@ export default function GrindFinder() {
           ))}
         </select>
 
-        <select
-          className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white disabled:opacity-50"
-          value={beanId}
-          onChange={(e) => setBeanId(e.target.value)}
-          disabled={!roaster || generating}
-        >
-          <option value="">{roaster ? "Select bean" : "Select roaster first"}</option>
-          {filteredBeans.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+        {/* Bean selector with favourite button */}
+        <div className="relative">
+          <select
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 pr-12 text-white disabled:opacity-50"
+            value={beanId}
+            onChange={(e) => setBeanId(e.target.value)}
+            disabled={!roaster || generating}
+          >
+            <option value="">{roaster ? "Select bean" : "Select roaster first"}</option>
+            {filteredBeans.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name} {favouriteBeans.has(b.id) ? "⭐" : ""}
+              </option>
+            ))}
+          </select>
+          
+          {isPro && beanId && (
+            <button
+              onClick={() => toggleFavouriteBean(beanId)}
+              disabled={savingFavourite}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xl hover:scale-110 transition disabled:opacity-50"
+              title={favouriteBeans.has(beanId) ? "Remove from favourites" : "Add to favourites"}
+            >
+              {favouriteBeans.has(beanId) ? "⭐" : "☆"}
+            </button>
+          )}
+        </div>
 
         <div className="flex items-center justify-between gap-3">
           <button
@@ -463,7 +634,7 @@ export default function GrindFinder() {
             </li>
             <li className="flex gap-2">
               <span className="text-blue-400">✓</span>
-              Track your favorite beans
+              Track your favourite beans
             </li>
           </ul>
           <button
@@ -489,7 +660,7 @@ export default function GrindFinder() {
           <ul className="mt-4 space-y-2 text-sm text-zinc-300">
             <li>- Unlimited grind recommendations</li>
             <li>- Advanced troubleshooting guidance</li>
-            <li>- Save favorite machines and beans</li>
+            <li>- Save favourite machines and beans</li>
           </ul>
           <div className="mt-4 flex items-center justify-between">
             <span className="text-xs text-zinc-500">Cancel anytime</span>
