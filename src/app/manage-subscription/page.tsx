@@ -36,17 +36,21 @@ function ManageSubscriptionContent() {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
 
+    console.log("Token for API:", token ? "Present" : "Missing");
+    console.log("Token length:", token?.length);
+    console.log("Token first 20 chars:", token?.substring(0, 20));
+
     const res = await fetch("/api/get-subscription-status", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
+    console.log("API Response status:", res.status);
     const data = await res.json();
-    
-    console.log("Subscription data:", data);
+    console.log("API Response data:", data);
 
-    if (!data.isPro) {
+    if (!res.ok || !data.isPro) {
       console.log("User is not Pro, redirecting to /pro");
       router.push("/pro");
       return;
