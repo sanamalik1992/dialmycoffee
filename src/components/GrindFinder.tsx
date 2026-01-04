@@ -94,11 +94,15 @@ export default function GrindFinder() {
               });
 
               if (res.ok) {
-                const data = await res.json();
-                const isProUser = !!data.isPro;
-                
-                if (isMounted) {
-                  setIsPro(isProUser);
+  const data = await res.json();
+  const isProUser = !!data.isPro;
+  console.log('GrindFinder API response:', data);
+  console.log('Setting isPro to:', isProUser);
+  console.log('isMounted:', isMounted);
+  
+  if (isMounted) {
+    setIsPro(isProUser);
+    console.log('isPro state updated');
                   
                   if (!isProUser) {
                     setRemainingFree(data.remaining ?? 2);
