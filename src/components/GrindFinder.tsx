@@ -103,6 +103,9 @@ export default function GrindFinder() {
   if (isMounted) {
     setIsPro(isProUser);
     console.log('isPro state updated');
+setTimeout(() => {
+  console.log('isPro state after update (should be true):', isPro);
+}, 100);
                   
                   if (!isProUser) {
                     setRemainingFree(data.remaining ?? 2);
@@ -126,7 +129,6 @@ export default function GrindFinder() {
         const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
           if (!isMounted) return;
           setUserEmail(session?.user?.email ?? null);
-          setIsPro(false);
           setRemainingFree(null);
           setRecommendation(null);
           setLimitReached(false);
