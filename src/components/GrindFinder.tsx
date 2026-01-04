@@ -94,18 +94,11 @@ export default function GrindFinder() {
               });
 
               if (res.ok) {
-  const data = await res.json();
-  const isProUser = !!data.isPro;
-  console.log('GrindFinder API response:', data);
-  console.log('Setting isPro to:', isProUser);
-  console.log('isMounted:', isMounted);
-  
-  if (isMounted) {
-    setIsPro(isProUser);
-    console.log('isPro state updated');
-setTimeout(() => {
-  console.log('isPro state after update (should be true):', isPro);
-}, 100);
+                const data = await res.json();
+                const isProUser = !!data.isPro;
+                
+                if (isMounted) {
+                  setIsPro(isProUser);
                   
                   if (!isProUser) {
                     setRemainingFree(data.remaining ?? 2);
@@ -129,6 +122,7 @@ setTimeout(() => {
         const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
           if (!isMounted) return;
           setUserEmail(session?.user?.email ?? null);
+          setIsPro(false);
           setRemainingFree(null);
           setRecommendation(null);
           setLimitReached(false);
@@ -476,7 +470,7 @@ setTimeout(() => {
             <button
               onClick={() => toggleFavouriteMachine(machineId)}
               disabled={savingFavourite}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl hover:scale-110 transition disabled:opacity-50 cursor-pointer z-10 bg-zinc-800 rounded-full w-8 h-8 flex items-center justify-center"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xl hover:scale-110 transition disabled:opacity-50"
               title={favouriteMachines.has(machineId) ? "Remove from favourites" : "Add to favourites"}
             >
               {favouriteMachines.has(machineId) ? "⭐" : "☆"}
@@ -521,7 +515,7 @@ setTimeout(() => {
             <button
               onClick={() => toggleFavouriteBean(beanId)}
               disabled={savingFavourite}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl hover:scale-110 transition disabled:opacity-50 cursor-pointer z-10 bg-zinc-800 rounded-full w-8 h-8 flex items-center justify-center"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xl hover:scale-110 transition disabled:opacity-50"
               title={favouriteBeans.has(beanId) ? "Remove from favourites" : "Add to favourites"}
             >
               {favouriteBeans.has(beanId) ? "⭐" : "☆"}
