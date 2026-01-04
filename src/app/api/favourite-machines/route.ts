@@ -31,9 +31,9 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      if (error.code === '23505') { // Unique constraint violation
-        return NextResponse.json({ error: 'Already in favorites' }, { status: 400 });
-      }
+      if (error.code === '23505') {
+  return NextResponse.json({ success: true, message: 'Already in favourites' }, { status: 200 });
+}
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
