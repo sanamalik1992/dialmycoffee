@@ -476,7 +476,7 @@ setTimeout(() => {
             <button
               onClick={() => toggleFavouriteMachine(machineId)}
               disabled={savingFavourite}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xl hover:scale-110 transition disabled:opacity-50"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl hover:scale-110 transition disabled:opacity-50 cursor-pointer z-10 bg-zinc-800 rounded-full w-8 h-8 flex items-center justify-center"
               title={favouriteMachines.has(machineId) ? "Remove from favourites" : "Add to favourites"}
             >
               {favouriteMachines.has(machineId) ? "⭐" : "☆"}
@@ -521,7 +521,7 @@ setTimeout(() => {
             <button
               onClick={() => toggleFavouriteBean(beanId)}
               disabled={savingFavourite}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xl hover:scale-110 transition disabled:opacity-50"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl hover:scale-110 transition disabled:opacity-50 cursor-pointer z-10 bg-zinc-800 rounded-full w-8 h-8 flex items-center justify-center"
               title={favouriteBeans.has(beanId) ? "Remove from favourites" : "Add to favourites"}
             >
               {favouriteBeans.has(beanId) ? "⭐" : "☆"}
