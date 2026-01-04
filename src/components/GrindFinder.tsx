@@ -122,7 +122,6 @@ export default function GrindFinder() {
         const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
           if (!isMounted) return;
           setUserEmail(session?.user?.email ?? null);
-          setIsPro(false);
           setRemainingFree(null);
           setRecommendation(null);
           setLimitReached(false);
