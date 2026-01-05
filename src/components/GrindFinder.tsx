@@ -688,37 +688,7 @@ export default function GrindFinder() {
           )}
         </div>
       )}
-
-      {recommendation && !userEmail && (
-        <div className="rounded-xl border border-blue-700/35 bg-zinc-950 p-5">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <p className="text-white font-medium">Save your settings & get more</p>
-              <p className="text-sm text-zinc-400">Create a free account to save this recommendation</p>
-            </div>
-          </div>
-          <ul className="space-y-2 text-sm text-zinc-300 mb-4">
-            <li className="flex gap-2">
-              <span className="text-blue-400">✓</span>
-              Save your grind settings
-            </li>
-            <li className="flex gap-2">
-              <span className="text-blue-400">✓</span>
-              2 free recommendations per month
-            </li>
-            <li className="flex gap-2">
-              <span className="text-blue-400">✓</span>
-              Set your default coffee machine
-            </li>
-          </ul>
-          <button
-            onClick={() => router.push("/")}
-            className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-500 transition"
-          >
-            Sign up free
-          </button>
-        </div>
-      )}
+      
 
       {recommendation && !isPro && (
         <div className="rounded-xl border border-amber-700/35 bg-zinc-950 p-5">
