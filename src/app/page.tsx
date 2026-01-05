@@ -75,15 +75,8 @@ export default function HomePage() {
         </div>
 
         {isPro ? (
-  <div className="flex gap-3">
-    <Link
-      href="/favourites"
-      className="shrink-0 rounded-xl border border-amber-700/35 px-6 py-3 text-sm font-semibold text-amber-200 hover:bg-amber-700/10 transition"
-    >
-      My Favourites
-    </Link>
-    <Link
-      href="/manage-subscription"
+  <Link
+    href="/manage-subscription"
       className="shrink-0 rounded-xl bg-[#C48A5A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#B67A4A] transition"
     >
       Manage Subscription

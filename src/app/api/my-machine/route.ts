@@ -6,6 +6,34 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+export async function GET(req: NextRequest) {
+  try {
+    const token = req.headers.get('authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Decode JWT to get user ID
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const userId = payload.sub;
+
+    // Get default machine
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('default_machine_id')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ machineId: profile?.default_machine_id || null });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '');
@@ -23,21 +51,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Machine ID required' }, { status: 400 });
     }
 
-    // Add to favorites
-    const { data, error } = await supabase
-      .from('favorite_machines')
-      .insert({ user_id: userId, machine_id: machineId })
-      .select()
-      .single();
+    // Save default machine
+    const { error } = await supabase
+      .from('profiles')
+      .update({ default_machine_id: machineId })
+      .eq('id', userId);
 
     if (error) {
-      if (error.code === '23505') {
-  return NextResponse.json({ success: true, message: 'Already in favourites' }, { status: 200 });
-}
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, machineId });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -54,63 +78,17 @@ export async function DELETE(req: NextRequest) {
     const payload = JSON.parse(atob(token.split('.')[1]));
     const userId = payload.sub;
 
-    const { searchParams } = new URL(req.url);
-    const machineId = searchParams.get('machineId');
-
-    if (!machineId) {
-      return NextResponse.json({ error: 'Machine ID required' }, { status: 400 });
-    }
-
+    // Clear default machine
     const { error } = await supabase
-      .from('favorite_machines')
-      .delete()
-      .eq('user_id', userId)
-      .eq('machine_id', machineId);
+      .from('profiles')
+      .update({ default_machine_id: null })
+      .eq('id', userId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function GET(req: NextRequest) {
-  try {
-    const token = req.headers.get('authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Decode JWT to get user ID
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const userId = payload.sub;
-
-    const { data, error } = await supabase
-      .from('favorite_machines')
-      .select(`
-        id,
-        machine_id,
-        created_at,
-        machines (
-          id,
-          name,
-          min_grind,
-          max_grind,
-          espresso_min,
-          espresso_max
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ favorites: data });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
