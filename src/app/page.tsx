@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -75,14 +75,13 @@ export default function HomePage() {
         </div>
 
         {isPro ? (
-  <Link
-    href="/manage-subscription"
-      className="shrink-0 rounded-xl bg-[#C48A5A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#B67A4A] transition"
-    >
-      Manage Subscription
-    </Link>
-  </div>
-) : (
+          <Link
+            href="/manage-subscription"
+            className="shrink-0 rounded-xl bg-[#C48A5A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#B67A4A] transition"
+          >
+            Manage Subscription
+          </Link>
+        ) : (
           <button
             onClick={handleGetProClick}
             className="shrink-0 rounded-xl bg-amber-700 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-600 transition"
