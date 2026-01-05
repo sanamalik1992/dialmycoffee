@@ -626,41 +626,38 @@ export default function GrindFinder() {
             
             {/* Format the AI response with sections */}
             <div className="text-sm text-zinc-300 leading-relaxed space-y-4">
-              {(() => {
-                const sections = recommendation.reasoning.split(/\n\n+/);
-                return sections.map((section, idx) => {
-                  // Check if section has bullets
-                  if (section.includes('•')) {
-                    const [header, ...bullets] = section.split('•').filter(s => s.trim());
-                    return (
-                      <div key={idx} className="space-y-2">
-                        {header && <p className="font-semibold text-white">{header.trim()}</p>}
-                        <ul className="space-y-1.5 pl-1">
-                          {bullets.map((bullet, bidx) => (
-                            <li key={bidx} className="flex gap-2">
-                              <span className="text-amber-400 shrink-0">•</span>
-                              <span>{bullet.trim()}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    );
-                  }
-                  
-                  // Bold any section headers (text ending with :)
-                  const parts = section.split(/([A-Z][A-Z\s]+:)/);
+              {recommendation.reasoning.split(/\n\n+/).map((section, idx) => {
+                // Check if section has bullets
+                if (section.includes('•')) {
+                  const [header, ...bullets] = section.split('•').filter((s: string) => s.trim());
                   return (
-                    <p key={idx}>
-                      {parts.map((part, pidx) => {
-                        if (part.match(/^[A-Z][A-Z\s]+:$/)) {
-                          return <strong key={pidx} className="text-white font-semibold">{part} </strong>;
-                        }
-                        return <span key={pidx}>{part}</span>;
-                      })}
-                    </p>
+                    <div key={idx} className="space-y-2">
+                      {header && <p className="font-semibold text-white">{header.trim()}</p>}
+                      <ul className="space-y-1.5 pl-1">
+                        {bullets.map((bullet: string, bidx: number) => (
+                          <li key={bidx} className="flex gap-2">
+                            <span className="text-amber-400 shrink-0">•</span>
+                            <span>{bullet.trim()}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   );
-                })}
-              })()}
+                }
+                
+                // Bold any section headers (text ending with :)
+                const parts = section.split(/([A-Z][A-Z\s]+:)/);
+                return (
+                  <p key={idx}>
+                    {parts.map((part: string, pidx: number) => {
+                      if (part.match(/^[A-Z][A-Z\s]+:$/)) {
+                        return <strong key={pidx} className="text-white font-semibold">{part} </strong>;
+                      }
+                      return <span key={pidx}>{part}</span>;
+                    })}
+                  </p>
+                );
+              })}
             </div>
             
             <div className="pt-3 border-t border-zinc-800 text-xs text-zinc-500">
