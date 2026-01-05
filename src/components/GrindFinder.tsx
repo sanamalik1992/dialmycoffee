@@ -106,9 +106,7 @@ export default function GrindFinder() {
 
                   // Load favourites for Pro users
                   if (isProUser) {
-  console.log('Loading favourites for Pro user');
-  await loadFavourites();
-  console.log('Favourites loaded');
+                    await loadFavourites();
                   }
                 }
               }
@@ -124,6 +122,7 @@ export default function GrindFinder() {
         const { data: sub } = supabase.auth.onAuthStateChange((_, session) => {
           if (!isMounted) return;
           setUserEmail(session?.user?.email ?? null);
+          setIsPro(false);
           setRemainingFree(null);
           setRecommendation(null);
           setLimitReached(false);
@@ -150,49 +149,18 @@ export default function GrindFinder() {
   }, []);
 
   async function loadFavourites() {
-  console.log('loadFavourites called');
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
+    console.log('loadFavourites called');
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
 
-  if (!token) {
-    console.log('No token, returning');
-    return;
-  }
-
-  try {
-    console.log('Fetching favourites from API');
-    const [machinesRes, beansRes] = await Promise.all([
-      fetch("/api/favourite-machines", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      fetch("/api/favourite-beans", {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-    ]);
-
-    const [machinesData, beansData] = await Promise.all([
-      machinesRes.json(),
-      beansRes.json(),
-    ]);
-
-    console.log('Machines data:', machinesData);
-    console.log('Beans data:', beansData);
-
-    if (machinesData.favourites) {
-      const machineIds = machinesData.favourites.map((f: any) => f.machine_id);
-      console.log('Setting favourite machines:', machineIds);
-      setFavouriteMachines(new Set(machineIds));
+    if (!token) {
+      console.log('No token, returning');
+      return;
     }
 
-    if (beansData.favourites) {
-      const beanIds = beansData.favourites.map((f: any) => f.bean_id);
-      console.log('Setting favourite beans:', beanIds);
-      setFavouriteBeans(new Set(beanIds));
-    }
-  } catch (error) {
-    console.error("Failed to load favourites:", error);
-  }
-}
+    try {
+      console.log('Fetching favourites from API');
+      const [machinesRes, beansRes] = await Promise.all([
         fetch("/api/favourite-machines", {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -206,12 +174,19 @@ export default function GrindFinder() {
         beansRes.json(),
       ]);
 
+      console.log('Machines data:', machinesData);
+      console.log('Beans data:', beansData);
+
       if (machinesData.favourites) {
-        setFavouriteMachines(new Set(machinesData.favourites.map((f: any) => f.machine_id)));
+        const machineIds = machinesData.favourites.map((f: any) => f.machine_id);
+        console.log('Setting favourite machines:', machineIds);
+        setFavouriteMachines(new Set(machineIds));
       }
 
       if (beansData.favourites) {
-        setFavouriteBeans(new Set(beansData.favourites.map((f: any) => f.bean_id)));
+        const beanIds = beansData.favourites.map((f: any) => f.bean_id);
+        console.log('Setting favourite beans:', beanIds);
+        setFavouriteBeans(new Set(beanIds));
       }
     } catch (error) {
       console.error("Failed to load favourites:", error);
@@ -507,7 +482,7 @@ export default function GrindFinder() {
             <button
               onClick={() => toggleFavouriteMachine(machineId)}
               disabled={savingFavourite}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl hover:scale-110 transition disabled:opacity-50 cursor-pointer z-10 bg-zinc-800 rounded-full w-10 h-10 flex items-center justify-center"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xl hover:scale-110 transition disabled:opacity-50"
               title={favouriteMachines.has(machineId) ? "Remove from favourites" : "Add to favourites"}
             >
               {favouriteMachines.has(machineId) ? "⭐" : "☆"}
@@ -552,7 +527,7 @@ export default function GrindFinder() {
             <button
               onClick={() => toggleFavouriteBean(beanId)}
               disabled={savingFavourite}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-2xl hover:scale-110 transition disabled:opacity-50 cursor-pointer z-10 bg-zinc-800 rounded-full w-10 h-10 flex items-center justify-center"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xl hover:scale-110 transition disabled:opacity-50"
               title={favouriteBeans.has(beanId) ? "Remove from favourites" : "Add to favourites"}
             >
               {favouriteBeans.has(beanId) ? "⭐" : "☆"}
