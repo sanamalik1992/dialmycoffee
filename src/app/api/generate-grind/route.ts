@@ -91,39 +91,57 @@ export async function POST(req: NextRequest) {
     let reasoning: string;
 
     try {
-      const prompt = `You are an expert barista. Recommend an optimal starting grind setting.
+      const prompt = `You are an expert barista with deep knowledge of espresso extraction science. Recommend an optimal starting grind setting for this specific setup.
 
-Machine: ${machine.name}
-- Grind range: ${machine.min_grind} to ${machine.max_grind}
+MACHINE: ${machine.name}
+- Full grind range: ${machine.min_grind} to ${machine.max_grind}
 - Espresso sweet spot: ${machine.espresso_min} to ${machine.espresso_max}
 
-Bean: ${bean.name} by ${bean.roaster}
-- Roast level: ${bean.roast_level || 'Unknown'}
+BEAN: ${bean.name} by ${bean.roaster}
+- Roast level: ${bean.roast_level || 'medium'}
 
-Based on the roast level and machine specs, what grind setting would you recommend as a starting point?
+EXTRACTION SCIENCE TO CONSIDER:
+- Light roasts: Denser structure, harder to extract. Need finer grind (lower number) for proper extraction. Under-extraction = sour/acidic.
+- Medium roasts: Balanced. Good starting point in middle of espresso range.
+- Dark roasts: More porous, easier to extract. Need coarser grind (higher number) to avoid over-extraction and bitterness.
+- Finer grind = more extraction, slower flow, more body, risk of bitterness
+- Coarser grind = less extraction, faster flow, lighter body, risk of sourness
 
-Respond in this exact format:
-GRIND: [number between ${machine.min_grind} and ${machine.max_grind}]
-REASONING: [1-2 sentences explaining why this grind setting is optimal for this combination]`;
+TASK: Provide a WHOLE NUMBER (no decimals) grind setting between ${machine.espresso_min} and ${machine.espresso_max} that will work as a starting point for this bean on this machine.
+
+Respond in exactly this format:
+GRIND: [whole number only]
+REASONING: [2-3 sentences explaining why this setting works for this specific bean and roast level]`;
 
       const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 300,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{
+          role: 'user',
+          content: prompt,
+        }],
       });
 
-      const text = message.content[0].type === 'text' ? message.content[0].text : '';
+      const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
       
-      // Parse Claude's response
-      const grindMatch = text.match(/GRIND:\s*(\d+\.?\d*)/i);
-      const reasoningMatch = text.match(/REASONING:\s*([\s\S]+)/i);
+      const grindMatch = responseText.match(/GRIND:\s*(\d+)/i);
+      const reasoningMatch = responseText.match(/REASONING:\s*(.+)/is);
       
       if (!grindMatch) {
         throw new Error('AI did not return a valid grind setting');
       }
       
-      grind = parseFloat(grindMatch[1]);
+      grind = parseInt(grindMatch[1], 10); // Parse as integer for whole numbers
       reasoning = reasoningMatch?.[1]?.trim() || 'Start here and adjust based on taste.';
+      
+      // Ensure grind is within machine's espresso range
+      if (machine.espresso_min && grind < machine.espresso_min) {
+        grind = machine.espresso_min;
+      }
+      if (machine.espresso_max && grind > machine.espresso_max) {
+        grind = machine.espresso_max;
+      }
+      
     } catch (aiError: any) {
       // Fallback calculation if AI fails
       console.error('AI generation failed, using fallback:', aiError.message);
@@ -132,14 +150,14 @@ REASONING: [1-2 sentences explaining why this grind setting is optimal for this 
       const roastLevel = bean.roast_level?.toLowerCase() || '';
       
       if (roastLevel.includes('light')) {
-        grind = (machine.min_grind || 1) + (range * 0.4);
-        reasoning = `For ${bean.name} (light roast) on your ${machine.name}, start at ${grind.toFixed(1)}. Light roasts extract slower, so we've set this finer to help extraction. Adjust finer if too sour or fast, coarser if too bitter or slow.`;
+        grind = Math.round((machine.min_grind || 1) + (range * 0.4));
+        reasoning = `For ${bean.name} (light roast) on your ${machine.name}, start at ${grind}. Light roasts extract slower, so we've set this finer to help extraction. Adjust finer if too sour or fast, coarser if too bitter or slow.`;
       } else if (roastLevel.includes('dark')) {
-        grind = (machine.min_grind || 1) + (range * 0.6);
-        reasoning = `For ${bean.name} (dark roast) on your ${machine.name}, start at ${grind.toFixed(1)}. Dark roasts extract faster, so we've set this slightly coarser. Adjust finer if too sour or fast, coarser if too bitter or slow.`;
+        grind = Math.round((machine.min_grind || 1) + (range * 0.6));
+        reasoning = `For ${bean.name} (dark roast) on your ${machine.name}, start at ${grind}. Dark roasts extract faster, so we've set this slightly coarser. Adjust finer if too sour or fast, coarser if too bitter or slow.`;
       } else {
-        grind = (machine.min_grind || 1) + (range * 0.5);
-        reasoning = `For ${bean.name} (medium roast) on your ${machine.name}, start at ${grind.toFixed(1)}. This is a good middle ground for medium roasts. Adjust finer if too sour or fast, coarser if too bitter or slow.`;
+        grind = Math.round((machine.min_grind || 1) + (range * 0.5));
+        reasoning = `For ${bean.name} (medium roast) on your ${machine.name}, start at ${grind}. This is a good middle ground for medium roasts. Adjust finer if too sour or fast, coarser if too bitter or slow.`;
       }
     }
 

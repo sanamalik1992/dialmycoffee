@@ -225,34 +225,49 @@ export default function GrindFinder() {
     }
   }
 
-  function handleFeedback(type: string) {
+    function handleFeedback(type: string) {
     if (!recommendation || !machine) return;
     
-    const currentGrind = parseFloat(recommendation.grind);
+    const currentGrind = parseInt(recommendation.grind);
     let newGrind = currentGrind;
     let advice = "";
     
     switch(type) {
       case "too_bitter":
-        newGrind = currentGrind + 0.5;
-        advice = "Grind coarser to reduce over-extraction. Try " + newGrind.toFixed(1);
+        newGrind = currentGrind + 1; // Grind coarser by 1 whole number
+        advice = "Grind coarser to reduce over-extraction. Try " + newGrind;
         break;
       case "too_sour":
-        newGrind = currentGrind - 0.5;
-        advice = "Grind finer to increase extraction. Try " + newGrind.toFixed(1);
+        newGrind = currentGrind - 1; // Grind finer by 1 whole number
+        advice = "Grind finer to increase extraction. Try " + newGrind;
         break;
       case "too_fast":
-        newGrind = currentGrind - 0.3;
-        advice = "Grind finer to slow down the shot. Try " + newGrind.toFixed(1);
+        newGrind = currentGrind - 1; // Grind finer by 1 whole number
+        advice = "Grind finer to slow down the shot. Try " + newGrind;
         break;
       case "too_slow":
-        newGrind = currentGrind + 0.3;
-        advice = "Grind coarser to speed up the shot. Try " + newGrind.toFixed(1);
+        newGrind = currentGrind + 1; // Grind coarser by 1 whole number
+        advice = "Grind coarser to speed up the shot. Try " + newGrind;
         break;
       case "perfect":
         advice = "Great! This setting works well for you.";
         break;
     }
+    
+    // Keep within machine limits
+    if (machine.min_grind && newGrind < machine.min_grind) {
+      newGrind = machine.min_grind;
+    }
+    if (machine.max_grind && newGrind > machine.max_grind) {
+      newGrind = machine.max_grind;
+    }
+    
+    setFeedback(advice);
+    if (type !== "perfect") {
+      setAdjustedGrind(newGrind.toString());
+    }
+  }
+
     
     // Keep within machine limits
     if (machine.min_grind && newGrind < machine.min_grind) {
