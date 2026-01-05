@@ -611,7 +611,7 @@ export default function GrindFinder() {
 
       {recommendation && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-amber-700/35 bg-zinc-950 p-5 space-y-3">
+          <div className="rounded-xl border border-amber-700/35 bg-zinc-950 p-5 space-y-4">
             <div>
               <p className="text-xs uppercase tracking-wide text-zinc-400">Recommended Grind</p>
               <p className="text-3xl font-semibold text-amber-200 mt-1">
@@ -623,10 +623,47 @@ export default function GrindFinder() {
                 </p>
               )}
             </div>
-            <div className="text-sm text-zinc-300 leading-relaxed">
-              {recommendation.reasoning}
+            
+            {/* Format the AI response with sections */}
+            <div className="text-sm text-zinc-300 leading-relaxed space-y-4">
+              {(() => {
+                const sections = recommendation.reasoning.split(/\n\n+/);
+                return sections.map((section, idx) => {
+                  // Check if section has bullets
+                  if (section.includes('•')) {
+                    const [header, ...bullets] = section.split('•').filter(s => s.trim());
+                    return (
+                      <div key={idx} className="space-y-2">
+                        {header && <p className="font-semibold text-white">{header.trim()}</p>}
+                        <ul className="space-y-1.5 pl-1">
+                          {bullets.map((bullet, bidx) => (
+                            <li key={bidx} className="flex gap-2">
+                              <span className="text-amber-400 shrink-0">•</span>
+                              <span>{bullet.trim()}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  }
+                  
+                  // Bold any section headers (text ending with :)
+                  const parts = section.split(/([A-Z][A-Z\s]+:)/);
+                  return (
+                    <p key={idx}>
+                      {parts.map((part, pidx) => {
+                        if (part.match(/^[A-Z][A-Z\s]+:$/)) {
+                          return <strong key={pidx} className="text-white font-semibold">{part} </strong>;
+                        }
+                        return <span key={pidx}>{part}</span>;
+                      })}
+                    </p>
+                  );
+                })}
+              })()}
             </div>
-            <div className="pt-2 border-t border-zinc-800 text-xs text-zinc-500">
+            
+            <div className="pt-3 border-t border-zinc-800 text-xs text-zinc-500">
               Machine range: {machine?.min_grind ?? "?"} - {machine?.max_grind ?? "?"}
               {" | "}
               Espresso: {machine?.espresso_min ?? "?"} - {machine?.espresso_max ?? "?"}
@@ -688,7 +725,6 @@ export default function GrindFinder() {
           )}
         </div>
       )}
-      
 
       {recommendation && !isPro && (
         <div className="rounded-xl border border-amber-700/35 bg-zinc-950 p-5">
