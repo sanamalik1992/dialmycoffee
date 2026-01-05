@@ -225,7 +225,7 @@ export default function GrindFinder() {
     }
   }
 
-    function handleFeedback(type: string) {
+  function handleFeedback(type: string) {
     if (!recommendation || !machine) return;
     
     const currentGrind = parseInt(recommendation.grind);
@@ -234,19 +234,19 @@ export default function GrindFinder() {
     
     switch(type) {
       case "too_bitter":
-        newGrind = currentGrind + 1; // Grind coarser by 1 whole number
+        newGrind = currentGrind + 1;
         advice = "Grind coarser to reduce over-extraction. Try " + newGrind;
         break;
       case "too_sour":
-        newGrind = currentGrind - 1; // Grind finer by 1 whole number
+        newGrind = currentGrind - 1;
         advice = "Grind finer to increase extraction. Try " + newGrind;
         break;
       case "too_fast":
-        newGrind = currentGrind - 1; // Grind finer by 1 whole number
+        newGrind = currentGrind - 1;
         advice = "Grind finer to slow down the shot. Try " + newGrind;
         break;
       case "too_slow":
-        newGrind = currentGrind + 1; // Grind coarser by 1 whole number
+        newGrind = currentGrind + 1;
         advice = "Grind coarser to speed up the shot. Try " + newGrind;
         break;
       case "perfect":
@@ -265,21 +265,6 @@ export default function GrindFinder() {
     setFeedback(advice);
     if (type !== "perfect") {
       setAdjustedGrind(newGrind.toString());
-    }
-  }
-
-    
-    // Keep within machine limits
-    if (machine.min_grind && newGrind < machine.min_grind) {
-      newGrind = machine.min_grind;
-    }
-    if (machine.max_grind && newGrind > machine.max_grind) {
-      newGrind = machine.max_grind;
-    }
-    
-    setFeedback(advice);
-    if (type !== "perfect") {
-      setAdjustedGrind(newGrind.toFixed(1));
     }
   }
 
@@ -371,7 +356,7 @@ export default function GrindFinder() {
         }
 
         setRecommendation({
-          grind: data.grind.toFixed(1),
+          grind: data.grind.toString(),
           reasoning: data.reasoning,
         });
         setRemainingFree(data.remaining);
@@ -391,21 +376,19 @@ export default function GrindFinder() {
           const range = machine.max_grind - machine.min_grind;
           
           if (bean.roast_level?.toLowerCase().includes("light")) {
-            grindValue = machine.min_grind + (range * 0.4);
+            grindValue = Math.round(machine.min_grind + (range * 0.4));
           } else if (bean.roast_level?.toLowerCase().includes("dark")) {
-            grindValue = machine.min_grind + (range * 0.6);
+            grindValue = Math.round(machine.min_grind + (range * 0.6));
           } else {
-            grindValue = machine.min_grind + (range * 0.5);
+            grindValue = Math.round(machine.min_grind + (range * 0.5));
           }
         } else {
           grindValue = 5;
         }
 
-        const grindStr = grindValue.toFixed(1);
-
         setRecommendation({
-          grind: grindStr,
-          reasoning: `For ${bean.name} (${bean.roast_level || "medium roast"}) on your ${machine.name}, start at ${grindStr}. ${
+          grind: grindValue.toString(),
+          reasoning: `For ${bean.name} (${bean.roast_level || "medium roast"}) on your ${machine.name}, start at ${grindValue}. ${
             bean.roast_level?.toLowerCase().includes("light")
               ? "Light roasts extract slower, so we have set this finer to help extraction."
               : bean.roast_level?.toLowerCase().includes("dark")
