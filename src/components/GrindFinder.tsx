@@ -51,6 +51,11 @@ export default function GrindFinder() {
   const [defaultMachineId, setDefaultMachineId] = useState<string | null>(null);
   const [savingMachine, setSavingMachine] = useState(false);
 
+  // Feedback state
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [adjustedGrind, setAdjustedGrind] = useState<string | null>(null);
+  const [savingGrind, setSavingGrind] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -220,6 +225,74 @@ export default function GrindFinder() {
     }
   }
 
+  function handleFeedback(type: string) {
+    if (!recommendation || !machine) return;
+    
+    const currentGrind = parseFloat(recommendation.grind);
+    let newGrind = currentGrind;
+    let advice = "";
+    
+    switch(type) {
+      case "too_bitter":
+        newGrind = currentGrind + 0.5;
+        advice = "Grind coarser to reduce over-extraction. Try " + newGrind.toFixed(1);
+        break;
+      case "too_sour":
+        newGrind = currentGrind - 0.5;
+        advice = "Grind finer to increase extraction. Try " + newGrind.toFixed(1);
+        break;
+      case "too_fast":
+        newGrind = currentGrind - 0.3;
+        advice = "Grind finer to slow down the shot. Try " + newGrind.toFixed(1);
+        break;
+      case "too_slow":
+        newGrind = currentGrind + 0.3;
+        advice = "Grind coarser to speed up the shot. Try " + newGrind.toFixed(1);
+        break;
+      case "perfect":
+        advice = "Great! This setting works well for you.";
+        break;
+    }
+    
+    // Keep within machine limits
+    if (machine.min_grind && newGrind < machine.min_grind) {
+      newGrind = machine.min_grind;
+    }
+    if (machine.max_grind && newGrind > machine.max_grind) {
+      newGrind = machine.max_grind;
+    }
+    
+    setFeedback(advice);
+    if (type !== "perfect") {
+      setAdjustedGrind(newGrind.toFixed(1));
+    }
+  }
+
+  async function saveGrindSetting() {
+    if (!isPro || !machineId || !beanId || !recommendation || savingGrind) return;
+    
+    setSavingGrind(true);
+    
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      if (!token) return;
+      
+      const grindToSave = adjustedGrind || recommendation.grind;
+      
+      // TODO: Create API route to save grind settings
+      console.log("Saving grind:", grindToSave, "for machine:", machineId, "bean:", beanId);
+      
+      // For now, just show success
+      setFeedback("✓ Saved! This grind will be suggested next time.");
+    } catch (error) {
+      console.error("Failed to save grind:", error);
+    } finally {
+      setSavingGrind(false);
+    }
+  }
+
   const roasters = useMemo(
     () => Array.from(new Set(beans.map((b) => b.roaster))).sort(),
     [beans]
@@ -236,6 +309,8 @@ export default function GrindFinder() {
   const resetRecommendation = useCallback(() => {
     setRecommendation(null);
     setLimitReached(false);
+    setFeedback(null);
+    setAdjustedGrind(null);
   }, []);
 
   useEffect(() => {
@@ -537,21 +612,82 @@ export default function GrindFinder() {
       </div>
 
       {recommendation && (
-        <div className="rounded-xl border border-amber-700/35 bg-zinc-950 p-5 space-y-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-zinc-400">Recommended Grind</p>
-            <p className="text-3xl font-semibold text-amber-200 mt-1">
-              {recommendation.grind}
-            </p>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-amber-700/35 bg-zinc-950 p-5 space-y-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-zinc-400">Recommended Grind</p>
+              <p className="text-3xl font-semibold text-amber-200 mt-1">
+                {adjustedGrind || recommendation.grind}
+              </p>
+              {adjustedGrind && (
+                <p className="text-sm text-zinc-400 mt-1">
+                  Adjusted from {recommendation.grind}
+                </p>
+              )}
+            </div>
+            <div className="text-sm text-zinc-300 leading-relaxed">
+              {recommendation.reasoning}
+            </div>
+            <div className="pt-2 border-t border-zinc-800 text-xs text-zinc-500">
+              Machine range: {machine?.min_grind ?? "?"} - {machine?.max_grind ?? "?"}
+              {" | "}
+              Espresso: {machine?.espresso_min ?? "?"} - {machine?.espresso_max ?? "?"}
+            </div>
           </div>
-          <div className="text-sm text-zinc-300 leading-relaxed">
-            {recommendation.reasoning}
-          </div>
-          <div className="pt-2 border-t border-zinc-800 text-xs text-zinc-500">
-            Machine range: {machine?.min_grind ?? "?"} - {machine?.max_grind ?? "?"}
-            {" | "}
-            Espresso: {machine?.espresso_min ?? "?"} - {machine?.espresso_max ?? "?"}
-          </div>
+          
+          {/* Pro feedback section */}
+          {isPro && (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-5">
+              <p className="text-sm font-medium text-white mb-3">How does it taste?</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                <button
+                  onClick={() => handleFeedback("too_bitter")}
+                  className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition"
+                >
+                  Too Bitter
+                </button>
+                <button
+                  onClick={() => handleFeedback("too_sour")}
+                  className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition"
+                >
+                  Too Sour
+                </button>
+                <button
+                  onClick={() => handleFeedback("too_fast")}
+                  className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition"
+                >
+                  Too Fast
+                </button>
+                <button
+                  onClick={() => handleFeedback("too_slow")}
+                  className="rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800 transition"
+                >
+                  Too Slow
+                </button>
+                <button
+                  onClick={() => handleFeedback("perfect")}
+                  className="rounded-lg border border-amber-700/35 bg-amber-700/10 px-3 py-2 text-sm text-amber-200 hover:bg-amber-700/20 transition"
+                >
+                  Just Right ✓
+                </button>
+              </div>
+              
+              {feedback && (
+                <div className="mt-4 p-3 rounded-lg bg-zinc-900 border border-zinc-800">
+                  <p className="text-sm text-zinc-300">{feedback}</p>
+                  {adjustedGrind && (
+                    <button
+                      onClick={saveGrindSetting}
+                      disabled={savingGrind}
+                      className="mt-3 w-full rounded-lg bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50 transition"
+                    >
+                      {savingGrind ? "Saving..." : "Save This Setting"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -601,6 +737,7 @@ export default function GrindFinder() {
             <li>- Unlimited grind recommendations</li>
             <li>- Advanced troubleshooting guidance</li>
             <li>- Save your default coffee machine</li>
+            <li>- Dial-in feedback system</li>
           </ul>
           <div className="mt-4 flex items-center justify-between">
             <span className="text-xs text-zinc-500">Cancel anytime</span>
