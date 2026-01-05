@@ -62,14 +62,14 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header with Get Pro/Manage Subscription button */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-white">
+      <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-4">
+        <div className="w-full sm:w-auto">
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white leading-tight">
             Dial in your espresso
           </h1>
-          <p className="text-zinc-300 max-w-2xl mt-2">
+          <p className="text-zinc-300 max-w-2xl mt-2 text-sm sm:text-base">
             Select your coffee machine, roaster and bean to get a grind recommendation.
           </p>
         </div>
@@ -77,14 +77,14 @@ export default function HomePage() {
         {isPro ? (
           <Link
             href="/manage-subscription"
-            className="shrink-0 rounded-xl bg-[#C48A5A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#B67A4A] transition"
+            className="w-full sm:w-auto shrink-0 rounded-xl bg-[#C48A5A] px-6 py-3 text-sm font-semibold text-white hover:bg-[#B67A4A] transition text-center"
           >
             Manage Subscription
           </Link>
         ) : (
           <button
             onClick={handleGetProClick}
-            className="shrink-0 rounded-xl bg-amber-700 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-600 transition"
+            className="w-full sm:w-auto shrink-0 rounded-xl bg-amber-700 px-6 py-3 text-sm font-semibold text-white hover:bg-amber-600 transition"
           >
             Get Pro - £3.99/mo
           </button>

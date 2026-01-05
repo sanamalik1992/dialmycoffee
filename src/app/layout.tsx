@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const brandBlack = "#000000";
-
+  
   return (
     <html lang="en">
       <body
@@ -26,21 +26,21 @@ export default function RootLayout({
           style={{ backgroundColor: brandBlack }}
           className="sticky top-0 z-50 border-b border-zinc-900"
         >
-          <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between">
-            <Link href="/" className="cursor-pointer">
+          <div className="mx-auto max-w-6xl px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+            <Link href="/" className="cursor-pointer flex-shrink-0">
               <Image
                 src="/logo.png"
                 alt="Dialmycoffee"
-                width={170}
-                height={42}
+                width={140}
+                height={35}
+                className="sm:w-[170px] sm:h-[42px] w-[140px] h-[35px]"
                 priority
               />
             </Link>
             <LoginButton />
           </div>
         </header>
-
-        <main className="mx-auto max-w-6xl px-4 py-8">
+        <main className="mx-auto max-w-6xl px-3 sm:px-4 py-4 sm:py-8">
           {children}
         </main>
       </body>
