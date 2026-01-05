@@ -150,13 +150,49 @@ export default function GrindFinder() {
   }, []);
 
   async function loadFavourites() {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
+  console.log('loadFavourites called');
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
 
-    if (!token) return;
+  if (!token) {
+    console.log('No token, returning');
+    return;
+  }
 
-    try {
-      const [machinesRes, beansRes] = await Promise.all([
+  try {
+    console.log('Fetching favourites from API');
+    const [machinesRes, beansRes] = await Promise.all([
+      fetch("/api/favourite-machines", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch("/api/favourite-beans", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
+
+    const [machinesData, beansData] = await Promise.all([
+      machinesRes.json(),
+      beansRes.json(),
+    ]);
+
+    console.log('Machines data:', machinesData);
+    console.log('Beans data:', beansData);
+
+    if (machinesData.favourites) {
+      const machineIds = machinesData.favourites.map((f: any) => f.machine_id);
+      console.log('Setting favourite machines:', machineIds);
+      setFavouriteMachines(new Set(machineIds));
+    }
+
+    if (beansData.favourites) {
+      const beanIds = beansData.favourites.map((f: any) => f.bean_id);
+      console.log('Setting favourite beans:', beanIds);
+      setFavouriteBeans(new Set(beanIds));
+    }
+  } catch (error) {
+    console.error("Failed to load favourites:", error);
+  }
+}
         fetch("/api/favourite-machines", {
           headers: { Authorization: `Bearer ${token}` },
         }),
