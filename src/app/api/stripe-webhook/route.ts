@@ -25,22 +25,42 @@ export async function POST(req: NextRequest) {
     // Verify webhook signature
     const event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
 
+    console.log('Webhook event received:', event.type);
+
     // Handle the event
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.supabase_user_id;
+        
+        console.log('Checkout completed for user:', userId);
+        console.log('Subscription ID:', session.subscription);
 
         if (userId && session.subscription) {
+          // Extract subscription ID (can be string or Stripe.Subscription object)
+          const subscriptionId = typeof session.subscription === 'string' 
+            ? session.subscription 
+            : session.subscription.id;
+
+          console.log('Updating user to Pro:', userId);
+
           // Update user to Pro
-          await supabase
+          const { error } = await supabase
             .from('profiles')
             .update({
               is_pro: true,
-              stripe_subscription_id: session.subscription as string,
+              stripe_subscription_id: subscriptionId,
               updated_at: new Date().toISOString(),
             })
             .eq('id', userId);
+
+          if (error) {
+            console.error('Failed to update user:', error);
+          } else {
+            console.log('Successfully upgraded user to Pro');
+          }
+        } else {
+          console.error('Missing userId or subscription in metadata');
         }
         break;
       }
@@ -49,6 +69,8 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
+
+        console.log('Subscription event:', event.type, 'for customer:', customerId);
 
         // Get user by customer ID
         const { data: profile } = await supabase
@@ -60,6 +82,8 @@ export async function POST(req: NextRequest) {
         if (profile) {
           const isActive = subscription.status === 'active';
           
+          console.log('Updating subscription status to:', isActive);
+
           await supabase
             .from('profiles')
             .update({
@@ -67,6 +91,8 @@ export async function POST(req: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq('id', profile.id);
+        } else {
+          console.error('No profile found for customer:', customerId);
         }
         break;
       }
@@ -83,7 +109,6 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (profile) {
-          // Optionally handle failed payment (e.g., send notification)
           console.log(`Payment failed for user ${profile.id}`);
         }
         break;
