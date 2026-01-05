@@ -86,36 +86,76 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Machine or bean not found' }, { status: 404 });
     }
 
-    // Generate AI recommendation using Claude (with fallback)
+    // Generate AI recommendation using Claude with professional barista knowledge
     let grind: number;
     let reasoning: string;
 
     try {
-      const prompt = `You are an expert barista with deep knowledge of espresso extraction science. Recommend an optimal starting grind setting for this specific setup.
+      const prompt = `You are a world-class barista and espresso expert. Provide a detailed, professional grind recommendation like a consultant would give.
 
 MACHINE: ${machine.name}
-- Full grind range: ${machine.min_grind} to ${machine.max_grind}
-- Espresso sweet spot: ${machine.espresso_min} to ${machine.espresso_max}
-
 BEAN: ${bean.name} by ${bean.roaster}
-- Roast level: ${bean.roast_level || 'medium'}
+ROAST LEVEL: ${bean.roast_level || 'medium'}
 
-EXTRACTION SCIENCE TO CONSIDER:
-- Light roasts: Denser structure, harder to extract. Need finer grind (lower number) for proper extraction. Under-extraction = sour/acidic.
-- Medium roasts: Balanced. Good starting point in middle of espresso range.
-- Dark roasts: More porous, easier to extract. Need coarser grind (higher number) to avoid over-extraction and bitterness.
-- Finer grind = more extraction, slower flow, more body, risk of bitterness
-- Coarser grind = less extraction, faster flow, lighter body, risk of sourness
+YOUR EXPERTISE:
+You have deep knowledge of every espresso machine's characteristics:
+- Sage/Breville Oracle, Barista Express, Dual Boiler: 1-30 scale, espresso 12-18, precise micro-adjustments
+- Delonghi Dedica, La Specialista: Different scales by model, often 1-7 or 1-13
+- Gaggia Classic Pro: No numeric grind (external grinder needed)
+- Bean-to-cup machines: Built-in grinders, 1-13 typical
+- Franke, Jura: Commercial/prosumer bean-to-cup
 
-TASK: Provide a WHOLE NUMBER (no decimals) grind setting between ${machine.espresso_min} and ${machine.espresso_max} that will work as a starting point for this bean on this machine.
+You know roast profiles:
+- Light roasts: Dense, bright, acidic, African origins (Ethiopia, Kenya), need finer grind, higher temps
+- Medium roasts: Balanced, South American (Colombia, Brazil), middle grind range
+- Medium-dark: Sweeter, chocolatey, fuller body, slightly coarser
+- Dark roasts: Oily, bittersweet, Italian style, need coarsest grind to avoid over-extraction
 
-Respond in exactly this format:
-GRIND: [whole number only]
-REASONING: [2-3 sentences explaining why this setting works for this specific bean and roast level]`;
+TASK: Provide a comprehensive recommendation in this EXACT format:
+
+GRIND: [whole number - the sweet spot]
+RANGE: [lower number]-[higher number] (the range to experiment within)
+REASONING: Start at [number]. [Bean name] is a [roast level description] that [extraction characteristic]. The ${machine.name} [machine-specific detail]. This setting will give you [expected flavor profile].
+
+DIAL-IN TARGETS:
+• Dose: [X]g
+• Yield: [X]g  
+• Time: [X]-[X] seconds
+
+QUICK ADJUSTMENTS:
+• Too sour/fast: Go finer → [number]-[number]
+• Too bitter/slow: Go coarser → [number]-[number]
+
+MACHINE TIP: [One specific tip about this machine's grinder or quirks]
+
+CRITICAL RULES:
+1. Give a SPECIFIC whole number as the starting point, not a range
+2. Base recommendations on REAL machine knowledge, not database values
+3. Be precise about dose and yield for this specific machine's basket size
+4. Include actionable troubleshooting steps
+5. Mention machine-specific quirks (e.g., "Oracle Jet adjusts in small steps", "Barista Express needs multiple clicks", "Dedica has limited range")
+
+Example excellent response:
+GRIND: 16
+RANGE: 15-17
+REASONING: Start at 16. Origin Resolute is a medium-dark espresso blend with chocolate and caramel notes that needs slightly coarser grind than light roasts. The Sage Oracle Jet has precise micro-adjustments between settings, so small changes make a big difference. This setting will give you balanced extraction with good body and sweetness.
+
+DIAL-IN TARGETS:
+• Dose: 18-19g
+• Yield: 36-40g
+• Time: 25-30 seconds
+
+QUICK ADJUSTMENTS:
+• Too sour/fast: Go finer → 14-15
+• Too bitter/slow: Go coarser → 17-18
+
+MACHINE TIP: Only change 1 step at a time on the Oracle Jet - its grinder is very sensitive and each click makes a noticeable difference.
+
+Now provide your recommendation:`;
 
       const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
+        max_tokens: 600,
         messages: [{
           role: 'user',
           content: prompt,
@@ -124,40 +164,61 @@ REASONING: [2-3 sentences explaining why this setting works for this specific be
 
       const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
       
+      // Extract grind number
       const grindMatch = responseText.match(/GRIND:\s*(\d+)/i);
-      const reasoningMatch = responseText.match(/REASONING:\s*(.+)/is);
       
       if (!grindMatch) {
         throw new Error('AI did not return a valid grind setting');
       }
       
-      grind = parseInt(grindMatch[1], 10); // Parse as integer for whole numbers
-      reasoning = reasoningMatch?.[1]?.trim() || 'Start here and adjust based on taste.';
+      grind = parseInt(grindMatch[1], 10);
       
-      // Ensure grind is within machine's espresso range
-      if (machine.espresso_min && grind < machine.espresso_min) {
-        grind = machine.espresso_min;
-      }
-      if (machine.espresso_max && grind > machine.espresso_max) {
-        grind = machine.espresso_max;
-      }
+      // Use the full detailed response as reasoning
+      const fullResponse = responseText.replace(/GRIND:\s*\d+\s*/i, '').trim();
+      reasoning = fullResponse || 'Start here and adjust based on taste.';
       
     } catch (aiError: any) {
-      // Fallback calculation if AI fails
+      // Smart fallback with detailed info
       console.error('AI generation failed, using fallback:', aiError.message);
       
-      const range = (machine.max_grind || 10) - (machine.min_grind || 1);
-      const roastLevel = bean.roast_level?.toLowerCase() || '';
+      const machineName = machine.name.toLowerCase();
+      const roastLevel = bean.roast_level?.toLowerCase() || 'medium';
       
-      if (roastLevel.includes('light')) {
-        grind = Math.round((machine.min_grind || 1) + (range * 0.4));
-        reasoning = `For ${bean.name} (light roast) on your ${machine.name}, start at ${grind}. Light roasts extract slower, so we've set this finer to help extraction. Adjust finer if too sour or fast, coarser if too bitter or slow.`;
-      } else if (roastLevel.includes('dark')) {
-        grind = Math.round((machine.min_grind || 1) + (range * 0.6));
-        reasoning = `For ${bean.name} (dark roast) on your ${machine.name}, start at ${grind}. Dark roasts extract faster, so we've set this slightly coarser. Adjust finer if too sour or fast, coarser if too bitter or slow.`;
+      if (machineName.includes('sage') || machineName.includes('breville') || machineName.includes('oracle') || machineName.includes('barista')) {
+        if (roastLevel.includes('light')) {
+          grind = 14;
+          reasoning = `RANGE: 13-15\nREASONING: Start at 14. ${bean.name} is a light roast that needs finer grinding for proper extraction. The ${machine.name} uses a 1-30 scale where 12-18 is espresso range.\n\nDIAL-IN TARGETS:\n• Dose: 18-19g\n• Yield: 36-38g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 12-13\n• Too bitter/slow: Go coarser → 15-16\n\nMACHINE TIP: Sage machines have precise grind control - adjust one number at a time.`;
+        } else if (roastLevel.includes('dark')) {
+          grind = 17;
+          reasoning = `RANGE: 16-18\nREASONING: Start at 17. ${bean.name} is a dark roast that extracts easily and needs coarser grinding. The ${machine.name} uses a 1-30 scale where 12-18 is espresso range.\n\nDIAL-IN TARGETS:\n• Dose: 18-19g\n• Yield: 36-40g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 15-16\n• Too bitter/slow: Go coarser → 18-19\n\nMACHINE TIP: Dark roasts can choke the grinder if too fine - stay in 16-18 range.`;
+        } else {
+          grind = 16;
+          reasoning = `RANGE: 15-17\nREASONING: Start at 16. ${bean.name} is a medium roast that works well in the middle of the espresso range. The ${machine.name} uses a 1-30 scale where 15-16 is the sweet spot.\n\nDIAL-IN TARGETS:\n• Dose: 18-19g\n• Yield: 36-40g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 14-15\n• Too bitter/slow: Go coarser → 17-18\n\nMACHINE TIP: The ${machine.name} has micro-adjustments - each step makes a noticeable difference.`;
+        }
+      } else if (machineName.includes('delonghi')) {
+        if (roastLevel.includes('light')) {
+          grind = 2;
+          reasoning = `RANGE: 1-3\nREASONING: Start at 2. ${bean.name} needs fine grinding for light roasts. Delonghi machines typically use 1-7 scale.\n\nDIAL-IN TARGETS:\n• Dose: 14-16g\n• Yield: 28-32g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 1\n• Too bitter/slow: Go coarser → 3-4`;
+        } else if (roastLevel.includes('dark')) {
+          grind = 4;
+          reasoning = `RANGE: 3-5\nREASONING: Start at 4. ${bean.name} is darker and extracts easily. Delonghi machines typically use 1-7 scale.\n\nDIAL-IN TARGETS:\n• Dose: 14-16g\n• Yield: 28-32g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 2-3\n• Too bitter/slow: Go coarser → 5-6`;
+        } else {
+          grind = 3;
+          reasoning = `RANGE: 2-4\nREASONING: Start at 3. ${bean.name} works well in the middle range. Delonghi machines typically use 1-7 scale.\n\nDIAL-IN TARGETS:\n• Dose: 14-16g\n• Yield: 28-32g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 2\n• Too bitter/slow: Go coarser → 4-5`;
+        }
       } else {
-        grind = Math.round((machine.min_grind || 1) + (range * 0.5));
-        reasoning = `For ${bean.name} (medium roast) on your ${machine.name}, start at ${grind}. This is a good middle ground for medium roasts. Adjust finer if too sour or fast, coarser if too bitter or slow.`;
+        // Generic fallback
+        const range = (machine.max_grind || 10) - (machine.min_grind || 1);
+        
+        if (roastLevel.includes('light')) {
+          grind = Math.round((machine.min_grind || 1) + (range * 0.4));
+        } else if (roastLevel.includes('dark')) {
+          grind = Math.round((machine.min_grind || 1) + (range * 0.6));
+        } else {
+          grind = Math.round((machine.min_grind || 1) + (range * 0.5));
+        }
+        
+        reasoning = `Start at ${grind} for ${bean.name} (${roastLevel} roast) on your ${machine.name}. Adjust finer if too sour or fast, coarser if too bitter or slow. Typical dose: 16-18g, yield: 32-36g, time: 25-30 seconds.`;
       }
     }
 
