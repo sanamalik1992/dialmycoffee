@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import LoginButton from "@/components/LoginButton";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "Dialmycoffee",
@@ -43,6 +44,7 @@ export default function RootLayout({
         <main className="mx-auto max-w-6xl px-3 sm:px-4 py-4 sm:py-8">
           {children}
         </main>
+        <Analytics />
       </body>
     </html>
   );
