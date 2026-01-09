@@ -93,6 +93,65 @@ export default function HomePage() {
 
       <GrindFinder />
 
+      {/* SEO Landing Pages Section */}
+      <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-6 sm:p-8">
+        <h2 className="text-2xl font-semibold text-white mb-3">
+          Popular Grind Guides
+        </h2>
+        <p className="text-zinc-400 mb-6">
+          Detailed grind setting guides for specific coffee machines
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link
+            href="/sage-barista-express-grind-settings"
+            className="rounded-lg border border-zinc-700 bg-zinc-900 p-4 hover:bg-zinc-800 hover:border-amber-700/50 transition group"
+          >
+            <h3 className="text-white font-medium group-hover:text-amber-200 transition">
+              Sage Barista Express
+            </h3>
+            <p className="text-sm text-zinc-400 mt-1">
+              Complete grind settings guide →
+            </p>
+          </Link>
+          
+          <Link
+            href="/breville-barista-pro-grind-settings"
+            className="rounded-lg border border-zinc-700 bg-zinc-900 p-4 hover:bg-zinc-800 hover:border-amber-700/50 transition group"
+          >
+            <h3 className="text-white font-medium group-hover:text-amber-200 transition">
+              Breville Barista Pro
+            </h3>
+            <p className="text-sm text-zinc-400 mt-1">
+              30 grind settings explained →
+            </p>
+          </Link>
+          
+          <Link
+            href="/gaggia-classic-pro-grind-settings"
+            className="rounded-lg border border-zinc-700 bg-zinc-900 p-4 hover:bg-zinc-800 hover:border-amber-700/50 transition group"
+          >
+            <h3 className="text-white font-medium group-hover:text-amber-200 transition">
+              Gaggia Classic Pro
+            </h3>
+            <p className="text-sm text-zinc-400 mt-1">
+              External grinder settings →
+            </p>
+          </Link>
+          
+          <Link
+            href="/sage-oracle-grind-settings"
+            className="rounded-lg border border-zinc-700 bg-zinc-900 p-4 hover:bg-zinc-800 hover:border-amber-700/50 transition group"
+          >
+            <h3 className="text-white font-medium group-hover:text-amber-200 transition">
+              Sage Oracle
+            </h3>
+            <p className="text-sm text-zinc-400 mt-1">
+              45 precision settings guide →
+            </p>
+          </Link>
+        </div>
+      </div>
+
       {/* Sign-up Modal */}
       <SignUpModal
         isOpen={showSignUpModal}
