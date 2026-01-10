@@ -464,9 +464,48 @@ export default function GrindFinder() {
       </div>
 
       <div className="space-y-4">
-        {/* Machine selector with My Machine button */}
+        {/* Machine selector with My Machine button - FIXED WIDTH */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          {isPro && machineId ? (
+            // Pro users with machine selected - show button
+            <div className="flex items-center gap-2">
+              <select
+                className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white disabled:opacity-50"
+                value={machineId}
+                onChange={(e) => setMachineId(e.target.value)}
+                disabled={generating}
+              >
+                <option value="">Select coffee machine</option>
+                {machines.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                    {defaultMachineId === m.id ? " ⭐" : ""}
+                  </option>
+                ))}
+              </select>
+              
+              {defaultMachineId === machineId ? (
+                <button
+                  onClick={clearMyMachine}
+                  disabled={savingMachine}
+                  className="shrink-0 rounded-xl border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition disabled:opacity-50"
+                  title="Clear my machine"
+                >
+                  Clear
+                </button>
+              ) : (
+                <button
+                  onClick={saveAsMyMachine}
+                  disabled={savingMachine}
+                  className="shrink-0 rounded-xl bg-amber-700/20 border border-amber-700/35 px-4 py-3 text-sm text-amber-200 hover:bg-amber-700/30 transition disabled:opacity-50"
+                  title="Save as my machine"
+                >
+                  {savingMachine ? "Saving..." : "Set as Mine"}
+                </button>
+              )}
+            </div>
+          ) : (
+            // Everyone else - full width dropdown (matches roaster/bean)
             <select
               className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white disabled:opacity-50"
               value={machineId}
@@ -481,31 +520,7 @@ export default function GrindFinder() {
                 </option>
               ))}
             </select>
-            
-            {isPro && machineId && (
-              <>
-                {defaultMachineId === machineId ? (
-                  <button
-                    onClick={clearMyMachine}
-                    disabled={savingMachine}
-                    className="shrink-0 rounded-xl border border-zinc-700 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition disabled:opacity-50"
-                    title="Clear my machine"
-                  >
-                    Clear
-                  </button>
-                ) : (
-                  <button
-                    onClick={saveAsMyMachine}
-                    disabled={savingMachine}
-                    className="shrink-0 rounded-xl bg-amber-700/20 border border-amber-700/35 px-4 py-3 text-sm text-amber-200 hover:bg-amber-700/30 transition disabled:opacity-50"
-                    title="Save as my machine"
-                  >
-                    {savingMachine ? "Saving..." : "Set as Mine"}
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+          )}
           
           {isPro && defaultMachineId === machineId && (
             <p className="text-xs text-amber-200/70 pl-4">
