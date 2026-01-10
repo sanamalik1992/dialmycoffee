@@ -468,7 +468,7 @@ export default function GrindFinder() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <select
-              className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white disabled:opacity-50"
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white disabled:opacity-50"
               value={machineId}
               onChange={(e) => setMachineId(e.target.value)}
               disabled={generating}
