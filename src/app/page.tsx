@@ -63,70 +63,73 @@ export default function HomePage() {
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-b from-amber-900/10 via-transparent to-transparent pointer-events-none" />
         
-        <div className="relative space-y-6 text-center max-w-3xl mx-auto py-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-200 text-sm font-medium">
+        <div className="relative space-y-4 sm:space-y-6 text-center max-w-3xl mx-auto py-4 sm:py-8">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs sm:text-sm font-medium">
             <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
             AI-Powered Grind Calculator
           </div>
           
-          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-white leading-[1.1]">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white leading-[1.1] px-4">
             Dial in your espresso
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">
               in seconds
             </span>
           </h1>
           
-          <p className="text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed px-4">
             Get AI-powered grind recommendations for your exact coffee machine and beans. 
             Stop guessing, start brewing perfect espresso.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-2 sm:pt-4 px-4">
             {isPro ? (
               <Link
                 href="/manage-subscription"
-                className="px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold text-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg shadow-amber-500/25"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold text-base sm:text-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg shadow-amber-500/25"
               >
                 Manage Subscription
               </Link>
             ) : (
               <button
                 onClick={handleGetProClick}
-                className="px-8 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold text-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg shadow-amber-500/25"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold text-base sm:text-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg shadow-amber-500/25"
               >
                 Get Pro - £3.99/mo
               </button>
             )}
             <Link
               href="#calculator"
-              className="px-8 py-4 rounded-xl border border-zinc-700 text-white font-semibold text-lg hover:bg-zinc-900 transition-all"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-xl border border-zinc-700 text-white font-semibold text-base sm:text-lg hover:bg-zinc-900 transition-all"
             >
               Try Free Calculator
             </Link>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 pt-8 max-w-xl mx-auto">
+          <div className="grid grid-cols-3 gap-4 sm:gap-8 pt-6 sm:pt-8 max-w-xl mx-auto px-4">
             <div>
-              <div className="text-3xl font-bold text-white">100+</div>
-              <div className="text-sm text-zinc-400">Coffee Machines</div>
+              <div className="text-2xl sm:text-3xl font-bold text-white">100+</div>
+              <div className="text-xs sm:text-sm text-zinc-400">Coffee Machines</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-white">500+</div>
-              <div className="text-sm text-zinc-400">Coffee Beans</div>
+              <div className="text-2xl sm:text-3xl font-bold text-white">500+</div>
+              <div className="text-xs sm:text-sm text-zinc-400">Coffee Beans</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-white">AI</div>
-              <div className="text-sm text-zinc-400">Powered</div>
+              <div className="text-2xl sm:text-3xl font-bold text-white">AI</div>
+              <div className="text-xs sm:text-sm text-zinc-400">Powered</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Calculator Section with Glow */}
-      <div id="calculator" className="relative">
-        {/* Glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 via-amber-600/20 to-amber-500/20 rounded-3xl blur-xl opacity-75" />
+      {/* Calculator Section with Enhanced Glow */}
+      <div id="calculator" className="relative px-4 sm:px-0">
+        {/* Enhanced glow effect */}
+        <div className="absolute -inset-2 bg-gradient-to-r from-amber-500/30 via-amber-600/40 to-amber-500/30 rounded-3xl blur-2xl animate-pulse" />
+        
+        {/* Subtle inner glow */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 via-amber-600/20 to-amber-500/20 rounded-3xl blur-lg" />
         
         <div className="relative">
           <GrindFinder />
@@ -285,29 +288,29 @@ export default function HomePage() {
 
       {/* CTA Section with Glow */}
       {!isPro && (
-        <div className="relative">
+        <div className="relative px-4">
           {/* Glow effect */}
           <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/30 via-amber-600/30 to-amber-500/30 rounded-3xl blur-2xl" />
           
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/20 via-amber-600/10 to-transparent border border-amber-500/30 p-12 text-center">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/20 via-amber-600/10 to-transparent border border-amber-500/30 p-8 sm:p-12 text-center">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/20 via-transparent to-transparent" />
             
-            <div className="relative space-y-6">
-              <h2 className="text-4xl font-bold text-white">
+            <div className="relative space-y-4 sm:space-y-6">
+              <h2 className="text-3xl sm:text-4xl font-bold text-white">
                 Ready for perfect espresso?
               </h2>
-              <p className="text-xl text-zinc-300 max-w-2xl mx-auto">
+              <p className="text-lg sm:text-xl text-zinc-300 max-w-2xl mx-auto">
                 Upgrade to Pro for unlimited recommendations, dial-in feedback, and save your favorite machines.
               </p>
               
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
                 <button
                   onClick={handleGetProClick}
-                  className="px-10 py-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold text-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-2xl shadow-amber-500/30"
+                  className="w-full sm:w-auto px-8 sm:px-10 py-4 sm:py-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold text-base sm:text-lg hover:from-amber-600 hover:to-amber-700 transition-all shadow-2xl shadow-amber-500/30"
                 >
                   Get Pro - £3.99/mo
                 </button>
-                <p className="text-sm text-zinc-400">Cancel anytime • No commitment</p>
+                <p className="text-xs sm:text-sm text-zinc-400">Cancel anytime • No commitment</p>
               </div>
             </div>
           </div>
