@@ -22,16 +22,17 @@ type BeanRow = {
 };
 
 const LOADING_STEPS = [
-  "Checking your machine profile…",
-  "Reading bean + roast details…",
-  "Estimating extraction window…",
+  "Checking your coffee machine…",
+  "Reading bean and roast details…",
+  "Estimating extraction parameters…",
   "Calibrating grind range…",
-  "Matching against similar feedback…",
-  "Finalising your recommended setting…"
+  "Comparing against similar brews…",
+  "Finalising your recommended settings…"
 ];
 
 const STEP_INTERVAL = 900; // ~900ms between status updates
 const MIN_LOADING_TIME = 800; // Minimum time to show loader
+const TIMER_INTERVAL = 100; // Update timer every 100ms
 
 export default function GrindFinder() {
   const router = useRouter();
@@ -51,8 +52,10 @@ export default function GrindFinder() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
   const [statusText, setStatusText] = useState("");
+  const [elapsedTime, setElapsedTime] = useState(0); // Timer in seconds
   const loadingStartTime = useRef<number>(0);
   const stepIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -81,6 +84,10 @@ export default function GrindFinder() {
     if (stepIntervalRef.current) {
       clearInterval(stepIntervalRef.current);
       stepIntervalRef.current = null;
+    }
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
     }
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -359,6 +366,7 @@ export default function GrindFinder() {
     setLimitReached(false);
     setLoadingStepIndex(0);
     setStatusText(LOADING_STEPS[0]);
+    setElapsedTime(0); // Reset timer
     loadingStartTime.current = Date.now();
 
     // Create new abort controller
@@ -371,6 +379,12 @@ export default function GrindFinder() {
       setLoadingStepIndex(currentStep);
       setStatusText(LOADING_STEPS[currentStep]);
     }, STEP_INTERVAL);
+
+    // Start timer (updates every 100ms)
+    timerIntervalRef.current = setInterval(() => {
+      const elapsed = (Date.now() - loadingStartTime.current) / 1000;
+      setElapsedTime(elapsed);
+    }, TIMER_INTERVAL);
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -938,6 +952,10 @@ export default function GrindFinder() {
                   aria-atomic="true"
                 >
                   {statusText}
+                </p>
+                {/* Timer */}
+                <p className="text-xs text-amber-400/70 font-mono">
+                  {elapsedTime.toFixed(1)} seconds elapsed
                 </p>
               </div>
 
