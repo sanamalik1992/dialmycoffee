@@ -423,16 +423,6 @@ export default function GrindFinder() {
         });
         setRemainingFree(data.remaining);
         setIsPro(!!data.isPro);
-
-        // Track the grind calculation
-        await trackGrindCalculation({
-          machineId: machineId,
-          machineName: machine.name,
-          beanId: beanId,
-          beanName: bean.name,
-          roasterName: bean.roaster,
-          grindSetting: data.grind,
-        });
       } else {
         const used = parseInt(localStorage.getItem("guest_uses") || "0");
         
@@ -485,14 +475,6 @@ export default function GrindFinder() {
 
         localStorage.setItem("guest_uses", String(used + 1));
         setGuestUsesLeft(Math.max(0, 1 - used));
-
-        // Track the grind calculation for guest users
-        await trackGrindCalculation({
-          machineName: machine.name,
-          beanName: bean.name,
-          roasterName: bean.roaster,
-          grindSetting: grindValue,
-        });
       }
     } catch (e: any) {
       if (e.name === 'AbortError') {
