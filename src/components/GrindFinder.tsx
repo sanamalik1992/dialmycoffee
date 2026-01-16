@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import SignUpModal from "@/components/SignUpModal";
-import { trackGrindCalculation } from "@/lib/analytics-utils";
 
 type MachineRow = {
   id: string;
