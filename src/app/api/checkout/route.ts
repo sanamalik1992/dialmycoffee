@@ -80,10 +80,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Checkout error:', error);
     return NextResponse.json(
-      { error: error.message || 'Checkout failed', details: error.toString() },
+      { error: error instanceof Error ? error.message : 'Checkout failed' },
       { status: 500 }
     );
   }

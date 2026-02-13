@@ -58,8 +58,8 @@ export default function LoginPage() {
       }
 
       setSent(true);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to send login link");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to send login link");
     } finally {
       setLoading(false);
     }

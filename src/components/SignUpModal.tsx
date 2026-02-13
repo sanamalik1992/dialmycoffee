@@ -37,8 +37,8 @@ export default function SignUpModal({ isOpen, onClose, onSuccess }: SignUpModalP
         // Success - proceed to checkout
         onSuccess();
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to create account");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create account");
     } finally {
       setLoading(false);
     }

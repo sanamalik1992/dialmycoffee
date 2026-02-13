@@ -181,7 +181,7 @@ export default function SageOracle() {
           
           <div>
             <h3 className="text-lg font-medium text-white mb-2">Should I adjust dose or grind first on Oracle?</h3>
-            <p className="text-zinc-300">Always adjust grind size first. The Oracle's auto-dosing should be set once and left at your preferred dose.</p>
+            <p className="text-zinc-300">Always adjust grind size first. The Oracle&apos;s auto-dosing should be set once and left at your preferred dose.</p>
           </div>
         </div>
       </div>

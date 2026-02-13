@@ -9,6 +9,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type RoastLevel = "light" | "medium" | "dark";
 
 function cleanText(s: string) {
@@ -151,9 +152,9 @@ export async function POST(req: Request) {
       .eq("id", bean_id);
 
     return NextResponse.json({ success: true, ...ai });
-  } catch (e: any) {
+  } catch (e: unknown) {
     return NextResponse.json(
-      { error: e.message ?? "Unknown error" },
+      { error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 }
     );
   }

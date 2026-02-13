@@ -17,6 +17,7 @@ function AuthCallbackContent() {
         const returnTo = params.get("returnTo") || "/pro";
 
         // ✅ 1) Try Supabase's built-in handler (works for hash and code flows)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const authAny = supabase.auth as any;
 
         if (typeof authAny.getSessionFromUrl === "function") {
@@ -53,6 +54,7 @@ function AuthCallbackContent() {
         if (token_hash && type) {
           const { error } = await supabase.auth.verifyOtp({
             token_hash,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             type: type as any,
           });
 
@@ -72,8 +74,8 @@ function AuthCallbackContent() {
         }
 
         setMsg("Missing login details. Please request a new login link.");
-      } catch (e: any) {
-        setMsg(e?.message ?? "Login failed. Please try again.");
+      } catch (e: unknown) {
+        setMsg(e instanceof Error ? e.message : "Login failed. Please try again.");
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

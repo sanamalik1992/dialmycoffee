@@ -48,10 +48,10 @@ export async function POST(req: NextRequest) {
       message: 'Subscription will be canceled at the end of the billing period',
       cancelAt: subscription.cancel_at,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Cancel subscription error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to cancel subscription' },
+      { error: error instanceof Error ? error.message : 'Failed to cancel subscription' },
       { status: 500 }
     );
   }

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { generateRecommendation, mergeAIWithStructured } from '@/lib/recommendationEngine';
+import type { Recommendation } from '@/lib/types';
+import { computeDaysOffRoast } from '@/lib/roastDate';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,10 +27,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const { machineId, beanId } = await req.json();
+    const body = await req.json();
+    const {
+      machineId,
+      beanId,
+      roastery_id,
+      bean_name,
+      roast_level,
+      roasted_on,
+      days_off_roast,
+      grinder_id,
+    } = body;
 
-    if (!machineId || !beanId) {
-      return NextResponse.json({ error: 'Missing machineId or beanId' }, { status: 400 });
+    if (!machineId) {
+      return NextResponse.json({ error: 'Missing machineId' }, { status: 400 });
     }
 
     // Get user's profile
@@ -56,194 +69,215 @@ export async function POST(req: NextRequest) {
 
     // Increment usage count if not Pro
     if (!isPro) {
-      const { error: updateError } = await supabase
+      await supabase
         .from('profiles')
-        .update({ 
+        .update({
           free_uses_count: (profile.free_uses_count || 0) + 1,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
-
-      if (updateError) {
-        console.error('Error updating usage count:', updateError);
-      }
     }
 
-    // Fetch machine and bean data
-    const { data: machine } = await supabase
-      .from('machines')
+    // Fetch machine data - try espresso_machines first, fall back to machines
+    let machine: Record<string, unknown> | null = null;
+    const { data: newMachine } = await supabase
+      .from('espresso_machines')
       .select('*')
       .eq('id', machineId)
       .single();
 
-    const { data: bean } = await supabase
-      .from('beans')
-      .select('*')
-      .eq('id', beanId)
-      .single();
-
-    if (!machine || !bean) {
-      return NextResponse.json({ error: 'Machine or bean not found' }, { status: 404 });
+    if (newMachine) {
+      machine = newMachine;
+    } else {
+      // Fallback to legacy machines table
+      const { data: legacyMachine } = await supabase
+        .from('machines')
+        .select('*')
+        .eq('id', machineId)
+        .single();
+      if (legacyMachine) {
+        machine = legacyMachine;
+      }
     }
 
-    // Generate AI recommendation using Claude with professional barista knowledge
-    let grind: number;
-    let reasoning: string;
+    if (!machine) {
+      return NextResponse.json({ error: 'Machine not found' }, { status: 404 });
+    }
+
+    // Fetch bean data if beanId provided
+    let bean: Record<string, unknown> | null = null;
+    if (beanId) {
+      const { data: beanData } = await supabase
+        .from('beans')
+        .select('*')
+        .eq('id', beanId)
+        .single();
+      bean = beanData;
+    }
+
+    // Fetch grinder if provided
+    let grinder: Record<string, unknown> | null = null;
+    if (grinder_id) {
+      const { data: grinderData } = await supabase
+        .from('grinders')
+        .select('*')
+        .eq('id', grinder_id)
+        .single();
+      grinder = grinderData;
+    }
+
+    // Compute days off roast
+    let computedDaysOffRoast: number | undefined;
+    if (days_off_roast !== undefined && days_off_roast !== null) {
+      computedDaysOffRoast = days_off_roast;
+    } else if (roasted_on) {
+      computedDaysOffRoast = computeDaysOffRoast(roasted_on);
+    }
+
+    // Check for saved baseline dial-in
+    let baseline: { dose_g: number; yield_g: number; time_s: number; grind_setting: string; temp_c?: number } | null = null;
+    if (isPro) {
+      const beanNameForSearch = bean_name || (bean ? String(bean.name) : null);
+      if (beanNameForSearch) {
+        const { data: savedDialIn } = await supabase
+          .from('dial_ins')
+          .select('dose_g, yield_g, time_s, grind_setting, temp_c')
+          .eq('user_id', user.id)
+          .eq('machine_id', machineId)
+          .eq('is_successful', true)
+          .ilike('bean_name', beanNameForSearch)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (savedDialIn) {
+          baseline = {
+            dose_g: Number(savedDialIn.dose_g),
+            yield_g: Number(savedDialIn.yield_g),
+            time_s: Number(savedDialIn.time_s),
+            grind_setting: String(savedDialIn.grind_setting),
+            temp_c: savedDialIn.temp_c ? Number(savedDialIn.temp_c) : undefined,
+          };
+        }
+      }
+    }
+
+    // Determine roast level
+    const effectiveRoastLevel = roast_level ||
+      (bean ? String(bean.roast_level || 'medium') : 'medium');
+
+    // Generate structured recommendation using deterministic engine
+    const machineName = String(machine.name || `${machine.brand || ''} ${machine.model || ''}`.trim());
+    const beanName = bean_name || (bean ? String(bean.name) : 'Unknown Bean');
+    const roasterName = roastery_id ? '' : (bean ? String(bean.roaster) : 'Unknown Roaster');
+
+    const structuredRec = generateRecommendation({
+      machine: {
+        id: String(machine.id),
+        name: machineName,
+        brand: machine.brand ? String(machine.brand) : undefined,
+        type: machine.type ? String(machine.type) : undefined,
+        min_grind: machine.grind_min as number ?? machine.min_grind as number ?? null,
+        max_grind: machine.grind_max as number ?? machine.max_grind as number ?? null,
+        espresso_min: machine.espresso_min as number ?? null,
+        espresso_max: machine.espresso_max as number ?? null,
+        has_builtin_grinder: !!machine.has_builtin_grinder,
+        supports_temp_control: !!machine.supports_temp_control,
+        supports_pressure_control: !!machine.supports_pressure_control,
+        supports_preinfusion: !!machine.supports_preinfusion,
+        default_dose_min: machine.default_dose_min as number ?? null,
+        default_dose_max: machine.default_dose_max as number ?? null,
+      },
+      bean: {
+        name: beanName,
+        roaster: roasterName,
+        roast_level: effectiveRoastLevel,
+      },
+      roast_level_override: roast_level as 'light' | 'medium' | 'medium_dark' | 'dark' | undefined,
+      roasted_on,
+      days_off_roast: computedDaysOffRoast,
+      baseline,
+      grinder: grinder ? {
+        brand: String(grinder.brand || ''),
+        model: String(grinder.model || ''),
+        adjustment_type: String(grinder.adjustment_type || 'stepped'),
+        scale_min: grinder.scale_min as number,
+        scale_max: grinder.scale_max as number,
+        units: String(grinder.units || 'steps'),
+      } : null,
+    });
+
+    // Attempt AI enhancement (non-blocking — falls back to structured rec)
+    let finalRec: Recommendation = structuredRec;
 
     try {
-      const prompt = `You are a world-class barista and espresso expert. Provide a detailed, professional grind recommendation like a consultant would give.
+      const aiPrompt = `You are a world-class barista. Enhance this structured recommendation with your expertise.
 
-MACHINE: ${machine.name}
-BEAN: ${bean.name} by ${bean.roaster}
-ROAST LEVEL: ${bean.roast_level || 'medium'}
+MACHINE: ${machineName}
+BEAN: ${beanName} by ${roasterName}
+ROAST LEVEL: ${effectiveRoastLevel}
+${computedDaysOffRoast !== undefined ? `DAYS OFF ROAST: ${computedDaysOffRoast}` : ''}
+${baseline ? `USER BASELINE: grind ${baseline.grind_setting}, ${baseline.dose_g}g dose, ${baseline.yield_g}g yield, ${baseline.time_s}s` : ''}
 
-YOUR EXPERTISE:
-You have deep knowledge of every espresso machine's characteristics:
-- Sage/Breville Oracle, Barista Express, Dual Boiler: 1-30 scale, espresso 12-18, precise micro-adjustments
-- Delonghi Dedica, La Specialista: Different scales by model, often 1-7 or 1-13
-- Gaggia Classic Pro: No numeric grind (external grinder needed)
-- Bean-to-cup machines: Built-in grinders, 1-13 typical
-- Franke, Jura: Commercial/prosumer bean-to-cup
+CURRENT STRUCTURED RECOMMENDATION:
+- Grind: ${structuredRec.grinder.setting_value}
+- Dose: ${structuredRec.target.dose_g}g
+- Yield: ${structuredRec.target.yield_g}g
+- Time: ${structuredRec.target.time_s}s
+${structuredRec.target.temp_c ? `- Temp: ${structuredRec.target.temp_c}°C` : ''}
 
-You know roast profiles:
-- Light roasts: Dense, bright, acidic, African origins (Ethiopia, Kenya), need finer grind, higher temps
-- Medium roasts: Balanced, South American (Colombia, Brazil), middle grind range
-- Medium-dark: Sweeter, chocolatey, fuller body, slightly coarser
-- Dark roasts: Oily, bittersweet, Italian style, need coarsest grind to avoid over-extraction
-
-TASK: Provide a comprehensive recommendation in this EXACT format:
-
-GRIND: [whole number - the sweet spot]
-RANGE: [lower number]-[higher number] (the range to experiment within)
-REASONING: Start at [number]. [Bean name] is a [roast level description] that [extraction characteristic]. The ${machine.name} [machine-specific detail]. This setting will give you [expected flavor profile].
-
-DIAL-IN TARGETS:
-• Dose: [X]g
-• Yield: [X]g  
-• Time: [X]-[X] seconds
-
-QUICK ADJUSTMENTS:
-• Too sour/fast: Go finer → [number]-[number]
-• Too bitter/slow: Go coarser → [number]-[number]
-
-MACHINE TIP: [One specific tip about this machine's grinder or quirks]
-
-CRITICAL RULES:
-1. Give a SPECIFIC whole number as the starting point, not a range
-2. Base recommendations on REAL machine knowledge, not database values
-3. Be precise about dose and yield for this specific machine's basket size
-4. Include actionable troubleshooting steps
-5. Mention machine-specific quirks (e.g., "Oracle Jet adjusts in small steps", "Barista Express needs multiple clicks", "Dedica has limited range")
-
-Example excellent response:
-GRIND: 16
-RANGE: 15-17
-REASONING: Start at 16. Origin Resolute is a medium-dark espresso blend with chocolate and caramel notes that needs slightly coarser grind than light roasts. The Sage Oracle Jet has precise micro-adjustments between settings, so small changes make a big difference. This setting will give you balanced extraction with good body and sweetness.
-
-DIAL-IN TARGETS:
-• Dose: 18-19g
-• Yield: 36-40g
-• Time: 25-30 seconds
-
-QUICK ADJUSTMENTS:
-• Too sour/fast: Go finer → 14-15
-• Too bitter/slow: Go coarser → 17-18
-
-MACHINE TIP: Only change 1 step at a time on the Oracle Jet - its grinder is very sensitive and each click makes a noticeable difference.
-
-Now provide your recommendation:`;
+Respond ONLY with valid JSON (no markdown, no backticks). Provide:
+{
+  "rationale": ["string array of 2-3 expert insights about this specific bean/machine combination"],
+  "expected_taste": ["string array of 3-4 expected flavour notes"],
+  "prep": ["string array of 3-4 preparation tips"],
+  "grinder": { "notes": ["string array of 1-2 grinder-specific tips for this machine"] }
+}`;
 
       const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 600,
-        messages: [{
-          role: 'user',
-          content: prompt,
-        }],
+        max_tokens: 400,
+        messages: [{ role: 'user', content: aiPrompt }],
       });
 
       const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-      
-      // Extract grind number
-      const grindMatch = responseText.match(/GRIND:\s*(\d+)/i);
-      
-      if (!grindMatch) {
-        throw new Error('AI did not return a valid grind setting');
-      }
-      
-      grind = parseInt(grindMatch[1], 10);
-      
-      // Use the full detailed response as reasoning
-      const fullResponse = responseText.replace(/GRIND:\s*\d+\s*/i, '').trim();
-      reasoning = fullResponse || 'Start here and adjust based on taste.';
-      
-    } catch (aiError: any) {
-      // Smart fallback with detailed info
-      console.error('AI generation failed, using fallback:', aiError.message);
-      
-      const machineName = machine.name.toLowerCase();
-      const roastLevel = bean.roast_level?.toLowerCase() || 'medium';
-      
-      if (machineName.includes('sage') || machineName.includes('breville') || machineName.includes('oracle') || machineName.includes('barista')) {
-        if (roastLevel.includes('light')) {
-          grind = 14;
-          reasoning = `RANGE: 13-15\nREASONING: Start at 14. ${bean.name} is a light roast that needs finer grinding for proper extraction. The ${machine.name} uses a 1-30 scale where 12-18 is espresso range.\n\nDIAL-IN TARGETS:\n• Dose: 18-19g\n• Yield: 36-38g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 12-13\n• Too bitter/slow: Go coarser → 15-16\n\nMACHINE TIP: Sage machines have precise grind control - adjust one number at a time.`;
-        } else if (roastLevel.includes('dark')) {
-          grind = 17;
-          reasoning = `RANGE: 16-18\nREASONING: Start at 17. ${bean.name} is a dark roast that extracts easily and needs coarser grinding. The ${machine.name} uses a 1-30 scale where 12-18 is espresso range.\n\nDIAL-IN TARGETS:\n• Dose: 18-19g\n• Yield: 36-40g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 15-16\n• Too bitter/slow: Go coarser → 18-19\n\nMACHINE TIP: Dark roasts can choke the grinder if too fine - stay in 16-18 range.`;
-        } else {
-          grind = 16;
-          reasoning = `RANGE: 15-17\nREASONING: Start at 16. ${bean.name} is a medium roast that works well in the middle of the espresso range. The ${machine.name} uses a 1-30 scale where 15-16 is the sweet spot.\n\nDIAL-IN TARGETS:\n• Dose: 18-19g\n• Yield: 36-40g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 14-15\n• Too bitter/slow: Go coarser → 17-18\n\nMACHINE TIP: The ${machine.name} has micro-adjustments - each step makes a noticeable difference.`;
-        }
-      } else if (machineName.includes('delonghi')) {
-        if (roastLevel.includes('light')) {
-          grind = 2;
-          reasoning = `RANGE: 1-3\nREASONING: Start at 2. ${bean.name} needs fine grinding for light roasts. Delonghi machines typically use 1-7 scale.\n\nDIAL-IN TARGETS:\n• Dose: 14-16g\n• Yield: 28-32g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 1\n• Too bitter/slow: Go coarser → 3-4`;
-        } else if (roastLevel.includes('dark')) {
-          grind = 4;
-          reasoning = `RANGE: 3-5\nREASONING: Start at 4. ${bean.name} is darker and extracts easily. Delonghi machines typically use 1-7 scale.\n\nDIAL-IN TARGETS:\n• Dose: 14-16g\n• Yield: 28-32g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 2-3\n• Too bitter/slow: Go coarser → 5-6`;
-        } else {
-          grind = 3;
-          reasoning = `RANGE: 2-4\nREASONING: Start at 3. ${bean.name} works well in the middle range. Delonghi machines typically use 1-7 scale.\n\nDIAL-IN TARGETS:\n• Dose: 14-16g\n• Yield: 28-32g\n• Time: 25-30 seconds\n\nQUICK ADJUSTMENTS:\n• Too sour/fast: Go finer → 2\n• Too bitter/slow: Go coarser → 4-5`;
-        }
-      } else {
-        // Generic fallback
-        const range = (machine.max_grind || 10) - (machine.min_grind || 1);
-        
-        if (roastLevel.includes('light')) {
-          grind = Math.round((machine.min_grind || 1) + (range * 0.4));
-        } else if (roastLevel.includes('dark')) {
-          grind = Math.round((machine.min_grind || 1) + (range * 0.6));
-        } else {
-          grind = Math.round((machine.min_grind || 1) + (range * 0.5));
-        }
-        
-        reasoning = `Start at ${grind} for ${bean.name} (${roastLevel} roast) on your ${machine.name}. Adjust finer if too sour or fast, coarser if too bitter or slow. Typical dose: 16-18g, yield: 32-36g, time: 25-30 seconds.`;
-      }
+
+      // Parse AI JSON response
+      const aiData = JSON.parse(responseText);
+      finalRec = mergeAIWithStructured(aiData, structuredRec);
+    } catch (aiError) {
+      // AI enhancement failed — use the structured recommendation as-is
+      console.error('AI enhancement failed, using structured recommendation:', aiError instanceof Error ? aiError.message : aiError);
     }
 
     // Save recommendation to database
+    const grindValue = typeof finalRec.grinder.setting_value === 'number'
+      ? finalRec.grinder.setting_value
+      : parseFloat(String(finalRec.grinder.setting_value)) || 0;
+
     await supabase.from('grind_recommendations').insert({
       user_id: user.id,
       machine_id: machineId,
-      bean_id: beanId,
-      recommended_grind: grind,
-      ai_reasoning: reasoning,
+      bean_id: beanId || null,
+      recommended_grind: grindValue,
+      ai_reasoning: JSON.stringify(finalRec),
     });
 
     const newRemaining = isPro ? 999 : usesRemaining - 1;
 
     return NextResponse.json({
-      grind,
-      reasoning,
+      recommendation: finalRec,
+      // Legacy fields for backward compatibility with existing UI
+      grind: grindValue,
+      reasoning: finalRec.rationale.join('\n\n'),
       remaining: newRemaining,
       isPro,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Generate grind error:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal error' },
+      { error: error instanceof Error ? error.message : 'Internal error' },
       { status: 500 }
     );
   }

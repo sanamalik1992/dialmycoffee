@@ -45,8 +45,8 @@ export async function GET(req: NextRequest) {
     };
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API error:', error);
-    return NextResponse.json({ error: error.message, isPro: false }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal error', isPro: false }, { status: 500 });
   }
 }
