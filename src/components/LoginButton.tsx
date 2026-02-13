@@ -85,9 +85,9 @@ export default function LoginButton() {
 
         // Success - user will be redirected automatically
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("Auth error:", e);
-      setError(e?.message ?? "Authentication failed");
+      setError(e instanceof Error ? e.message : "Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -97,8 +97,8 @@ export default function LoginButton() {
     try {
       setLoading(true);
       await supabase.auth.signOut();
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to sign out");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to sign out");
     } finally {
       setLoading(false);
     }

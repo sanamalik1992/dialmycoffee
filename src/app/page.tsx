@@ -14,35 +14,34 @@ export default function HomePage() {
   const [isPro, setIsPro] = useState(false);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoggedIn(!!user);
 
-  async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser();
-    setIsLoggedIn(!!user);
+      if (user) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
 
-    if (user) {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
+        if (token) {
+          try {
+            const res = await fetch("/api/get-subscription-status", {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
 
-      if (token) {
-        try {
-          const res = await fetch("/api/get-subscription-status", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            setIsPro(!!data.isPro);
+            if (res.ok) {
+              const data = await res.json();
+              setIsPro(!!data.isPro);
+            }
+          } catch (error) {
+            console.error("Failed to check Pro status:", error);
           }
-        } catch (error) {
-          console.error("Failed to check Pro status:", error);
         }
       }
     }
-  }
+    checkAuth();
+  }, []);
 
   function handleGetProClick() {
     if (isLoggedIn) {

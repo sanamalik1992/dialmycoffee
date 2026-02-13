@@ -11,13 +11,12 @@ function ManageSubscriptionContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
-  const [isPro, setIsPro] = useState(false);
+  const [_isPro, setIsPro] = useState(false);
   const [userEmail, setUserEmail] = useState("");
-  const [subscriptionId, setSubscriptionId] = useState("");
+  const [_subscriptionId, setSubscriptionId] = useState("");
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { checkAuth(); }, []);
 
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -95,8 +94,8 @@ function ManageSubscriptionContent() {
 
       alert("Subscription canceled successfully. You'll have access until the end of your billing period.");
       router.push("/");
-    } catch (error: any) {
-      alert(error.message || "Failed to cancel subscription");
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : "Failed to cancel subscription");
     } finally {
       setCanceling(false);
     }

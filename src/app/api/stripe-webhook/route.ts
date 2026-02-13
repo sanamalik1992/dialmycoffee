@@ -123,10 +123,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ received: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Webhook error:', error);
     return NextResponse.json(
-      { error: error.message || 'Webhook handler failed' },
+      { error: error instanceof Error ? error.message : 'Webhook handler failed' },
       { status: 400 }
     );
   }

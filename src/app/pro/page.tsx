@@ -62,8 +62,8 @@ function ProPageContent() {
       } else {
         alert("Checkout URL missing. Check /api/checkout response.");
       }
-    } catch (e: any) {
-      alert(e?.message ?? "Checkout failed");
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Checkout failed");
     } finally {
       setLoading(false);
     }
